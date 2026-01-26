@@ -17,6 +17,8 @@ import java.nio.charset.StandardCharsets
  */
 object WialonParser extends ProtocolParser:
   
+  override val protocolName: String = "wialon"
+  
   private val LOGIN_PREFIX = "#L#"
   private val DATA_PREFIX = "#D#"
   private val PING_PREFIX = "#P#"

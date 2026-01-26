@@ -9,6 +9,11 @@ import com.wayrecall.tracker.domain.{GpsRawPoint, ProtocolError, Command}
  */
 trait ProtocolParser:
   /**
+   * Название протокола (для логов и событий)
+   */
+  def protocolName: String
+  
+  /**
    * Парсит IMEI из первого пакета соединения
    */
   def parseImei(buffer: ByteBuf): IO[ProtocolError, String]

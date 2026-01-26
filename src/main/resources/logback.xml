@@ -1,12 +1,125 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<configuration>
-    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+<!--
+  Конфигурация логирования Connection Manager
+  
+  Уровни логов:
+  - ERROR: Критические ошибки, требующие внимания
+  - WARN:  Потенциальные проблемы (idle disconnect, unknown IMEI)
+  - INFO:  Важные события (connect, disconnect, GPS data)
+  - DEBUG: Детальная информация для отладки
+  - TRACE: Максимальная детализация (парсинг пакетов)
+  
+  Переменные окружения:
+  - LOG_LEVEL: Уровень логирования (по умолчанию INFO)
+  - LOG_FILE:  Путь к файлу логов (по умолчанию logs/connection-manager.log)
+-->
+<configuration scan="true" scanPeriod="30 seconds">
+    
+    <!-- Переменные с дефолтными значениями -->
+    <property name="LOG_LEVEL" value="${LOG_LEVEL:-INFO}"/>
+    <property name="LOG_FILE" value="${LOG_FILE:-logs/connection-manager.log}"/>
+    <property name="LOG_MAX_SIZE" value="${LOG_MAX_SIZE:-100MB}"/>
+    <property name="LOG_MAX_HISTORY" value="${LOG_MAX_HISTORY:-30}"/>
+    
+    <!-- Формат вывода -->
+    <property name="LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"/>
+    <property name="LOG_PATTERN_COLORED" value="%d{HH:mm:ss.SSS} %highlight(%-5level) %cyan(%logger{20}) - %msg%n"/>
+    
+    <!-- ============================================================ -->
+    <!-- КОНСОЛЬНЫЙ АППЕНДЕР (для Docker/dev) -->
+    <!-- ============================================================ -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>%d{yyyy-MM-dd HH:mm:ss} %-5level %logger{36} - %msg%n</pattern>
+            <pattern>${LOG_PATTERN_COLORED}</pattern>
+            <charset>UTF-8</charset>
         </encoder>
     </appender>
-
+    
+    <!-- ============================================================ -->
+    <!-- ФАЙЛОВЫЙ АППЕНДЕР С РОТАЦИЕЙ (для production) -->
+    <!-- ============================================================ -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_FILE}</file>
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <!-- Ежедневная ротация + по размеру -->
+            <fileNamePattern>${LOG_FILE}.%d{yyyy-MM-dd}.%i.gz</fileNamePattern>
+            <maxFileSize>${LOG_MAX_SIZE}</maxFileSize>
+            <maxHistory>${LOG_MAX_HISTORY}</maxHistory>
+            <totalSizeCap>3GB</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+    
+    <!-- ============================================================ -->
+    <!-- ОТДЕЛЬНЫЙ ЛОГ ДЛЯ GPS ДАННЫХ (для аналитики) -->
+    <!-- ============================================================ -->
+    <appender name="GPS_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/gps-data.log</file>
+        <encoder>
+            <!-- JSON формат для удобства парсинга -->
+            <pattern>%d{yyyy-MM-dd'T'HH:mm:ss.SSSZ} %msg%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>logs/gps-data.%d{yyyy-MM-dd}.%i.gz</fileNamePattern>
+            <maxFileSize>500MB</maxFileSize>
+            <maxHistory>7</maxHistory>
+            <totalSizeCap>10GB</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+    
+    <!-- ============================================================ -->
+    <!-- АСИНХРОННЫЕ ОБЁРТКИ (для производительности) -->
+    <!-- ============================================================ -->
+    <appender name="ASYNC_FILE" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>1024</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <includeCallerData>false</includeCallerData>
+        <appender-ref ref="FILE"/>
+    </appender>
+    
+    <appender name="ASYNC_GPS" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>2048</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <appender-ref ref="GPS_FILE"/>
+    </appender>
+    
+    <!-- ============================================================ -->
+    <!-- НАСТРОЙКИ ЛОГГЕРОВ ПО ПАКЕТАМ -->
+    <!-- ============================================================ -->
+    
+    <!-- Наш код - детальное логирование -->
+    <logger name="com.wayrecall.tracker" level="${LOG_LEVEL}" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="ASYNC_FILE"/>
+    </logger>
+    
+    <!-- GPS данные - отдельный файл -->
+    <logger name="com.wayrecall.tracker.gps" level="INFO" additivity="false">
+        <appender-ref ref="ASYNC_GPS"/>
+    </logger>
+    
+    <!-- Netty - только ошибки (слишком много INFO) -->
+    <logger name="io.netty" level="WARN"/>
+    
+    <!-- Lettuce (Redis) - только предупреждения -->
+    <logger name="io.lettuce" level="WARN"/>
+    
+    <!-- Kafka - только предупреждения -->
+    <logger name="org.apache.kafka" level="WARN"/>
+    
+    <!-- ZIO - INFO для диагностики -->
+    <logger name="zio" level="INFO"/>
+    
+    <!-- ============================================================ -->
+    <!-- КОРНЕВОЙ ЛОГГЕР -->
+    <!-- ============================================================ -->
     <root level="INFO">
-        <appender-ref ref="STDOUT"/>
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="ASYNC_FILE"/>
     </root>
+    
 </configuration>

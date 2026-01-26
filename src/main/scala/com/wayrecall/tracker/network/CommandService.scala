@@ -6,7 +6,11 @@ import com.wayrecall.tracker.domain.*
 import com.wayrecall.tracker.storage.{RedisClient, KafkaProducer}
 
 /**
- * Pending command with its promise
+ * Ожидающая выполнения команда с Promise для получения результата
+ * 
+ * @param command Команда для отправки на трекер
+ * @param promise Promise для уведомления о результате
+ * @param createdAt Время создания в миллисекундах (для отслеживания таймаутов)
  */
 private[network] final case class PendingCommand(
     command: Command,
@@ -104,7 +108,7 @@ object CommandService:
                 timeoutResult <- createResult(
                   command, 
                   CommandStatus.Timeout,
-                  Some(s"Tracker did not respond within ${commandTimeout.toSeconds}s")
+                  Some(s"Tracker did not respond within ${commandTimeout.getSeconds}s")
                 )
                 // Публикуем результат таймаута
                 _ <- redisClient.publish(

@@ -123,6 +123,7 @@ enum DisconnectReason derives JsonCodec:
   case ConnectionReset    // TCP reset (сетевая проблема)
   case ProtocolError      // Ошибка парсинга протокола
   case ServerShutdown     // Сервер остановлен
+  case AdminDisconnect    // Отключен администратором (устройство заблокировано)
   case Unknown            // Неизвестная причина
 
 /**
@@ -147,3 +148,23 @@ extension (p1: GpsPoint)
    * Alias для distanceTo - вычисляет расстояние до другой точки по формуле Haversine (в метрах)
    */
   def distance(p2: GpsPoint): Double = p1.distanceTo(p2)
+
+/**
+ * Событие: неизвестное устройство пытается подключиться
+ * 
+ * Публикуется в Kafka топик "unknown-devices" когда трекер
+ * с незарегистрированным IMEI пытается подключиться.
+ * 
+ * Может использоваться для:
+ * - Автоматической регистрации (provisioning)
+ * - Уведомления администраторов
+ * - Аудита попыток подключения
+ */
+case class UnknownDeviceEvent(
+    imei: String,
+    protocol: String,        // teltonika, wialon, ruptela, navtelecom
+    remoteAddress: String,   // IP адрес
+    port: Int,
+    timestamp: Long,
+    connectionAttempt: Int = 1  // Номер попытки (для rate limit)
+) derives JsonCodec

@@ -1,0 +1,5 @@
+[warn] -- [E121] Pattern Match Warning: /home/isushko/repos/wayrecall-tracker-system-template/services/connection-manager/src/main/scala/com/wayrecall/tracker/network/ConnectionHandler.scala:498:11 
+[warn] 498 |      case error =>
+[warn]     |           ^^^^^
+[warn]     |Unreachable case except for null (if this is intentional, consider writing case null => instead).
+[warn] one warning found

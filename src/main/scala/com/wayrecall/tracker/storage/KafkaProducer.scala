@@ -4,17 +4,23 @@ import zio.*
 import zio.json.*
 import org.apache.kafka.clients.producer.{KafkaProducer => JavaKafkaProducer, ProducerConfig, ProducerRecord, RecordMetadata, Callback}
 import org.apache.kafka.common.serialization.StringSerializer
-import com.wayrecall.tracker.domain.{GpsPoint, DeviceStatus, KafkaError}
+import com.wayrecall.tracker.domain.{GpsPoint, DeviceStatus, UnknownDeviceEvent, KafkaError}
 import com.wayrecall.tracker.config.KafkaConfig
 import java.util.Properties
 
 /**
  * Kafka Producer - чисто функциональный интерфейс
+ * 
+ * Топики:
+ * - gps-events: GPS точки от трекеров
+ * - device-status: Online/Offline статусы
+ * - unknown-devices: Попытки подключения неизвестных IMEI
  */
 trait KafkaProducer:
   def publish(topic: String, key: String, value: String): IO[KafkaError, Unit]
   def publishGpsEvent(point: GpsPoint): IO[KafkaError, Unit]
   def publishDeviceStatus(status: DeviceStatus): IO[KafkaError, Unit]
+  def publishUnknownDevice(event: UnknownDeviceEvent): IO[KafkaError, Unit]
 
 object KafkaProducer:
   
@@ -27,6 +33,9 @@ object KafkaProducer:
   
   def publishDeviceStatus(status: DeviceStatus): ZIO[KafkaProducer, KafkaError, Unit] =
     ZIO.serviceWithZIO(_.publishDeviceStatus(status))
+  
+  def publishUnknownDevice(event: UnknownDeviceEvent): ZIO[KafkaProducer, KafkaError, Unit] =
+    ZIO.serviceWithZIO(_.publishUnknownDevice(event))
   
   /**
    * Live реализация с Java Kafka Producer
@@ -52,6 +61,10 @@ object KafkaProducer:
     
     override def publishDeviceStatus(status: DeviceStatus): IO[KafkaError, Unit] =
       serializeAndPublish(status, config.topics.deviceStatus, status.imei)
+    
+    override def publishUnknownDevice(event: UnknownDeviceEvent): IO[KafkaError, Unit] =
+      val topic = config.topics.unknownDevices.getOrElse("unknown-devices")
+      serializeAndPublish(event, topic, event.imei)
     
     /**
      * Сериализует объект в JSON и публикует - чисто функциональный подход

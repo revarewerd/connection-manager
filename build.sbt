@@ -5,10 +5,24 @@ val nettyVersion = "4.1.104.Final"
 
 lazy val root = project
   .in(file("."))
+  .enablePlugins(JavaAppPackaging)
   .settings(
     name := "connection-manager",
     version := "0.1.0-SNAPSHOT",
     scalaVersion := scala3Version,
+    
+    // Конфигурация assembly (fat JAR)
+    assembly / assemblyJarName := "connection-manager.jar",
+    assembly / mainClass := Some("com.wayrecall.tracker.Main"),
+    assembly / assemblyMergeStrategy := {
+      case PathList("META-INF", "MANIFEST.MF") => MergeStrategy.discard
+      case PathList("META-INF", "services", _*) => MergeStrategy.concat
+      case PathList("META-INF", _*) => MergeStrategy.discard
+      case "reference.conf" => MergeStrategy.concat
+      case "application.conf" => MergeStrategy.concat
+      case x if x.endsWith(".proto") => MergeStrategy.first
+      case x => MergeStrategy.first
+    },
     
     libraryDependencies ++= Seq(
       // ZIO Core

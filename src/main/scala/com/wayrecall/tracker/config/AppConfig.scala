@@ -57,7 +57,8 @@ final case class KafkaProducerSettings(
 
 final case class KafkaTopicsConfig(
     rawGpsEvents: String,
-    deviceStatus: String
+    deviceStatus: String,
+    unknownDevices: Option[String] = Some("unknown-devices")
 )
 
 final case class KafkaConfig(
@@ -113,6 +114,17 @@ final case class LoggingConfig(
 )
 
 /**
+ * Конфигурация rate limiter для защиты от DDoS/flood атак
+ */
+final case class RateLimitConfig(
+    enabled: Boolean = true,
+    maxConnectionsPerIp: Int = 100,        // Максимум соединений с одного IP
+    refillRatePerSecond: Int = 10,         // Скорость восстановления токенов
+    burstSize: Int = 50,                   // Допустимый burst
+    cleanupIntervalSeconds: Int = 300       // Интервал очистки старых записей
+)
+
+/**
  * Основная конфигурация приложения
  */
 final case class AppConfig(
@@ -122,7 +134,8 @@ final case class AppConfig(
     kafka: KafkaConfig,
     filters: FiltersConfig,
     commands: CommandsConfig,
-    logging: LoggingConfig
+    logging: LoggingConfig,
+    rateLimit: RateLimitConfig = RateLimitConfig()
 )
 
 object AppConfig:

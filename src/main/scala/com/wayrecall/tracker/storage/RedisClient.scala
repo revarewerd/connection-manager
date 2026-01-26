@@ -14,6 +14,11 @@ import scala.jdk.CollectionConverters.*
 
 /**
  * Клиент для работы с Redis - чисто функциональный интерфейс
+ * 
+ * ✅ IMEI → VehicleId маппинг
+ * ✅ Кеширование позиций
+ * ✅ Pub/Sub для команд
+ * ✅ Fallback на PostgreSQL (опционально)
  */
 trait RedisClient:
   def getVehicleId(imei: String): IO[RedisError, Option[Long]]
@@ -31,6 +36,10 @@ trait RedisClient:
   def hset(key: String, values: Map[String, String]): Task[Unit]
   def hgetall(key: String): Task[Map[String, String]]
   def get(key: String): Task[Option[String]]
+  
+  // Дополнительные методы для кеширования
+  def setVehicleId(imei: String, vehicleId: Long, ttlSeconds: Long = 3600): IO[RedisError, Unit]
+  def del(key: String): Task[Unit]
 
 object RedisClient:
   
@@ -67,6 +76,12 @@ object RedisClient:
   
   def get(key: String): RIO[RedisClient, Option[String]] =
     ZIO.serviceWithZIO(_.get(key))
+  
+  def setVehicleId(imei: String, vehicleId: Long, ttlSeconds: Long = 3600): ZIO[RedisClient, RedisError, Unit] =
+    ZIO.serviceWithZIO(_.setVehicleId(imei, vehicleId, ttlSeconds))
+  
+  def del(key: String): RIO[RedisClient, Unit] =
+    ZIO.serviceWithZIO(_.del(key))
   
   /**
    * Live реализация с Lettuce
@@ -152,6 +167,14 @@ object RedisClient:
     
     override def get(key: String): Task[Option[String]] =
       fromCompletionStage(commands.get(key)).map(Option(_))
+    
+    override def setVehicleId(imei: String, vehicleId: Long, ttlSeconds: Long): IO[RedisError, Unit] =
+      fromCompletionStage(commands.setex(vehicleKey(imei), ttlSeconds, vehicleId.toString))
+        .unit
+        .mapError(e => RedisError.OperationFailed(e.getMessage))
+    
+    override def del(key: String): Task[Unit] =
+      fromCompletionStage(commands.del(key)).unit
     
     /**
      * Конвертирует Java CompletionStage в ZIO эффект

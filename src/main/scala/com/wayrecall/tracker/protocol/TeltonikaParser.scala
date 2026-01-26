@@ -17,6 +17,8 @@ import java.nio.charset.StandardCharsets
  */
 class TeltonikaParser extends ProtocolParser:
   
+  override val protocolName: String = "teltonika"
+  
   // Codec 8 и 8E идентификаторы
   private val CODEC_8: Byte = 0x08
   private val CODEC_8E: Byte = 0x8E.toByte
@@ -140,79 +142,85 @@ class TeltonikaParser extends ProtocolParser:
   
   /**
    * Пропускает IO элементы в записи
+   * 
+   * IO элементы содержат телеметрию: напряжение, топливо, температуру и т.д.
+   * В базовой реализации мы их игнорируем, но двигаем указатель чтения буфера.
+   * 
+   * Примечание: используем val _ = для явного указания, что значения отбрасываются.
+   * Это ФП-идиоматичный способ показать намеренный discard.
    */
   private def skipIoElements(buffer: ByteBuf, isCodec8E: Boolean): Unit =
     if isCodec8E then
       // Codec 8E: количество IO элементов как 2 байта
-      val eventIoId = buffer.readUnsignedShort()
-      val totalIoCount = buffer.readUnsignedShort()
+      val _ = buffer.readUnsignedShort() // eventIoId - отбрасываем
+      val _ = buffer.readUnsignedShort() // totalIoCount - отбрасываем
       
       // 1-байтовые IO
       val count1 = buffer.readUnsignedShort()
       (0 until count1).foreach { _ =>
-        buffer.readUnsignedShort() // id
-        buffer.readByte() // value
+        val _ = buffer.readUnsignedShort() // id - отбрасываем
+        val _ = buffer.readByte()          // value - отбрасываем
       }
       
       // 2-байтовые IO
       val count2 = buffer.readUnsignedShort()
       (0 until count2).foreach { _ =>
-        buffer.readUnsignedShort() // id
-        buffer.readShort() // value
+        val _ = buffer.readUnsignedShort() // id - отбрасываем
+        val _ = buffer.readShort()         // value - отбрасываем
       }
       
       // 4-байтовые IO
       val count4 = buffer.readUnsignedShort()
       (0 until count4).foreach { _ =>
-        buffer.readUnsignedShort() // id
-        buffer.readInt() // value
+        val _ = buffer.readUnsignedShort() // id - отбрасываем
+        val _ = buffer.readInt()           // value - отбрасываем
       }
       
       // 8-байтовые IO
       val count8 = buffer.readUnsignedShort()
       (0 until count8).foreach { _ =>
-        buffer.readUnsignedShort() // id
-        buffer.readLong() // value
+        val _ = buffer.readUnsignedShort() // id - отбрасываем
+        val _ = buffer.readLong()          // value - отбрасываем
       }
       
       // Variable length IO (только в Codec 8E)
       val countX = buffer.readUnsignedShort()
       (0 until countX).foreach { _ =>
-        buffer.readUnsignedShort() // id
+        val _ = buffer.readUnsignedShort() // id - отбрасываем
         val len = buffer.readUnsignedShort()
-        buffer.skipBytes(len) // value
+        buffer.skipBytes(len) // value - пропускаем
       }
     else
       // Codec 8: количество IO элементов как 1 байт
-      val eventIoId = buffer.readUnsignedByte()
-      val totalIoCount = buffer.readUnsignedByte()
+      val _ = buffer.readUnsignedByte() // eventIoId - отбрасываем
+      val _ = buffer.readUnsignedByte() // totalIoCount - отбрасываем
       
       // 1-байтовые IO
       val count1 = buffer.readUnsignedByte()
       (0 until count1).foreach { _ =>
-        buffer.readUnsignedByte() // id
-        buffer.readByte() // value
+        val _ = buffer.readUnsignedByte() // id - отбрасываем
+        val _ = buffer.readByte()         // value - отбрасываем
       }
       
       // 2-байтовые IO
       val count2 = buffer.readUnsignedByte()
       (0 until count2).foreach { _ =>
-        buffer.readUnsignedByte() // id
-        buffer.readShort() // value
+        val _ = buffer.readUnsignedByte() // id - отбрасываем
+        val _ = buffer.readShort()        // value - отбрасываем
       }
       
       // 4-байтовые IO
       val count4 = buffer.readUnsignedByte()
       (0 until count4).foreach { _ =>
-        buffer.readUnsignedByte() // id
-        buffer.readInt() // value
+        val _ = buffer.readUnsignedByte() // id - отбрасываем
+        val _ = buffer.readInt()          // value - отбрасываем
       }
       
       // 8-байтовые IO
       val count8 = buffer.readUnsignedByte()
       (0 until count8).foreach { _ =>
-        buffer.readUnsignedByte() // id
-        buffer.readLong() // value
+        val _ = buffer.readUnsignedByte() // id - отбрасываем
+        val _ = buffer.readLong()         // value - отбрасываем
       }
   
   /**
@@ -296,17 +304,26 @@ class TeltonikaParser extends ProtocolParser:
   
   /**
    * Вычисляет CRC-16-IBM (polynomial 0xA001)
+   * 
+   * Алгоритм:
+   * 1. XOR текущего CRC с байтом данных
+   * 2. 8 итераций: если младший бит = 1, то XOR с полиномом
+   * 
+   * ✅ Чисто функциональная реализация через foldLeft (без var)
    */
   private def calculateCrc16(data: Array[Byte]): Int =
-    var crc = 0
-    for byte <- data do
-      crc ^= (byte & 0xFF)
-      for _ <- 0 until 8 do
-        if (crc & 1) != 0 then
-          crc = (crc >> 1) ^ 0xA001
+    data.foldLeft(0) { (crc, byte) =>
+      // XOR CRC с текущим байтом
+      val xored = crc ^ (byte & 0xFF)
+      
+      // 8 итераций сдвига через foldLeft
+      (0 until 8).foldLeft(xored) { (acc, _) =>
+        if (acc & 1) != 0 then
+          (acc >> 1) ^ 0xA001
         else
-          crc = crc >> 1
-    crc
+          acc >> 1
+      }
+    }
 
 object TeltonikaParser:
   /**

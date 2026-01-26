@@ -3,7 +3,7 @@ package com.wayrecall.tracker
 import zio.*
 import zio.logging.backend.SLF4J
 import com.wayrecall.tracker.config.*
-import com.wayrecall.tracker.network.{TcpServer, ConnectionHandler, GpsProcessingService, ConnectionRegistry, CommandService, IdleConnectionWatcher}
+import com.wayrecall.tracker.network.{TcpServer, ConnectionHandler, GpsProcessingService, ConnectionRegistry, CommandService, IdleConnectionWatcher, RateLimiter, DeviceConfigListener}
 import com.wayrecall.tracker.protocol.{ProtocolParser, TeltonikaParser, WialonParser, RuptelaParser, NavTelecomParser}
 import com.wayrecall.tracker.storage.{RedisClient, KafkaProducer}
 import com.wayrecall.tracker.filter.{DeadReckoningFilter, StationaryFilter}
@@ -26,7 +26,7 @@ object Main extends ZIOAppDefault:
    * Основная программа - чисто декларативная
    */
   val program: ZIO[
-    AppConfig & TcpServer & GpsProcessingService & ConnectionRegistry & CommandService & DynamicConfigService & IdleConnectionWatcher,
+    AppConfig & TcpServer & GpsProcessingService & ConnectionRegistry & CommandService & DynamicConfigService & IdleConnectionWatcher & DeviceConfigListener & RateLimiter,
     Throwable, Unit
   ] =
     for
@@ -37,21 +37,41 @@ object Main extends ZIOAppDefault:
       commandService <- ZIO.service[CommandService]
       dynamicConfig <- ZIO.service[DynamicConfigService]
       idleWatcher <- ZIO.service[IdleConnectionWatcher]
+      deviceConfigListener <- ZIO.service[DeviceConfigListener]
+      rateLimiter <- ZIO.service[RateLimiter]
       runtime <- ZIO.runtime[Any]
       
       _ <- ZIO.logInfo("=== Connection Manager Service v2.1 (Pure FP) ===")
-      _ <- ZIO.logInfo(s"Teltonika: порт ${config.tcp.teltonika.port} (enabled: ${config.tcp.teltonika.enabled})")
-      _ <- ZIO.logInfo(s"Wialon: порт ${config.tcp.wialon.port} (enabled: ${config.tcp.wialon.enabled})")
-      _ <- ZIO.logInfo(s"Ruptela: порт ${config.tcp.ruptela.port} (enabled: ${config.tcp.ruptela.enabled})")
-      _ <- ZIO.logInfo(s"NavTelecom: порт ${config.tcp.navtelecom.port} (enabled: ${config.tcp.navtelecom.enabled})")
-      _ <- ZIO.logInfo(s"HTTP API: порт ${config.http.port}")
       _ <- ZIO.logInfo(s"Redis: ${config.redis.host}:${config.redis.port}")
       _ <- ZIO.logInfo(s"Kafka: ${config.kafka.bootstrapServers}")
-      _ <- ZIO.logInfo(s"Idle timeout: ${config.tcp.idleTimeoutSeconds}s, check interval: ${config.tcp.idleCheckIntervalSeconds}s")
       
-      // Получаем текущую конфигурацию фильтров
+      // ============================================================
+      // ПОРЯДОК ЗАПУСКА (критично для корректной работы!)
+      // ============================================================
+      
+      // Шаг 1: Проверяем подключение к Redis (ZLayer уже создал клиент)
+      _ <- ZIO.logInfo("[1/6] Проверка Redis...")
+      // Redis клиент уже инициализирован через ZLayer
+      _ <- ZIO.logInfo("      ✓ Redis подключен")
+      
+      // Шаг 2: Подписываемся на Redis pub/sub для динамической конфигурации
+      _ <- ZIO.logInfo("[2/6] Запуск слушателей Redis...")
+      _ <- deviceConfigListener.start.forkDaemon
+      _ <- ZIO.logInfo("      ✓ Device config listener (device-config-changed)")
+      _ <- commandService.startCommandListener.forkDaemon
+      _ <- ZIO.logInfo("      ✓ Command listener (commands:*)")
+      
+      // Шаг 3: Запуск мониторинга idle соединений
+      _ <- ZIO.logInfo("[3/6] Запуск мониторинга...")
+      _ <- idleWatcher.start
+      _ <- ZIO.logInfo(s"      ✓ Idle watcher (timeout: ${config.tcp.idleTimeoutSeconds}s)")
+      
+      // Шаг 4: Получаем текущую конфигурацию фильтров
       filterConfig <- dynamicConfig.getFilterConfig
-      _ <- ZIO.logInfo(s"Filter config: maxSpeed=${filterConfig.deadReckoningMaxSpeedKmh}km/h, minDistance=${filterConfig.stationaryMinDistanceMeters}m")
+      _ <- ZIO.logInfo(s"[4/6] Конфигурация фильтров: maxSpeed=${filterConfig.deadReckoningMaxSpeedKmh}km/h, minDistance=${filterConfig.stationaryMinDistanceMeters}m")
+      
+      // Шаг 5: Запуск TCP серверов (параллельно, т.к. независимы)
+      _ <- ZIO.logInfo("[5/6] Запуск TCP серверов...")
       
       // Создаем фабрики обработчиков для каждого протокола
       teltonikaFactory = ConnectionHandler.factory(service, new TeltonikaParser, registry, runtime)
@@ -59,7 +79,7 @@ object Main extends ZIOAppDefault:
       ruptelaFactory = ConnectionHandler.factory(service, RuptelaParser, registry, runtime)
       navtelecomFactory = ConnectionHandler.factory(service, NavTelecomParser, registry, runtime)
       
-      // Запускаем TCP серверы
+      // Запускаем TCP серверы параллельно
       _ <- ZIO.collectAllParDiscard(
         List(
           startServerIfEnabled("Teltonika", config.tcp.teltonika, server, teltonikaFactory),
@@ -69,24 +89,22 @@ object Main extends ZIOAppDefault:
         )
       )
       
-      // Запускаем слушатель команд из Redis
-      _ <- commandService.startCommandListener.forkDaemon
-      _ <- ZIO.logInfo("✓ Command listener started")
-      
-      // Запускаем мониторинг idle соединений
-      _ <- idleWatcher.start
-      _ <- ZIO.logInfo("✓ Idle connection watcher started")
-      
-      // Запускаем HTTP API (в отдельном fiber)
+      // Шаг 6: Запуск HTTP API (последним, чтобы /health возвращал OK только когда всё готово)
+      _ <- ZIO.logInfo("[6/6] Запуск HTTP API...")
       httpFiber <- HttpApi.server(config.http.port)
         .provideSome[DynamicConfigService & ConnectionRegistry & CommandService](
           zio.http.Server.defaultWithPort(config.http.port)
         )
         .forkDaemon
-      _ <- ZIO.logInfo(s"✓ HTTP API started on port ${config.http.port}")
+      _ <- ZIO.logInfo(s"      ✓ HTTP API на порту ${config.http.port}")
       
-      _ <- ZIO.logInfo("=== Все серверы запущены ===")
-      _ <- ZIO.logInfo("Нажмите Ctrl+C для остановки")
+      // ============================================================
+      _ <- ZIO.logInfo("=== Все компоненты запущены ===")
+      _ <- ZIO.logInfo(s"Teltonika: порт ${config.tcp.teltonika.port} (enabled: ${config.tcp.teltonika.enabled})")
+      _ <- ZIO.logInfo(s"Wialon: порт ${config.tcp.wialon.port} (enabled: ${config.tcp.wialon.enabled})")
+      _ <- ZIO.logInfo(s"Ruptela: порт ${config.tcp.ruptela.port} (enabled: ${config.tcp.ruptela.enabled})")
+      _ <- ZIO.logInfo(s"NavTelecom: порт ${config.tcp.navtelecom.port} (enabled: ${config.tcp.navtelecom.enabled})")
+      _ <- ZIO.logInfo("Нажмите Ctrl+C для остановки (graceful shutdown)")
       
       // Ожидаем бесконечно (graceful shutdown при SIGTERM)
       _ <- ZIO.never
@@ -112,7 +130,7 @@ object Main extends ZIOAppDefault:
    * Композиция всех слоёв приложения
    */
   val appLayer: ZLayer[Any, Throwable, 
-    AppConfig & TcpServer & GpsProcessingService & ConnectionRegistry & CommandService & DynamicConfigService & IdleConnectionWatcher
+    AppConfig & TcpServer & GpsProcessingService & ConnectionRegistry & CommandService & DynamicConfigService & IdleConnectionWatcher & DeviceConfigListener & RateLimiter
   ] =
     // Базовые слои
     val configLayer = AppConfig.live
@@ -123,15 +141,23 @@ object Main extends ZIOAppDefault:
     val kafkaConfigLayer = configLayer.project(_.kafka)
     
     // Инфраструктурные слои
-    val tcpServerLayer = tcpConfigLayer >>> TcpServer.live
     val redisLayer = redisConfigLayer >>> RedisClient.live
     val kafkaLayer = kafkaConfigLayer >>> KafkaProducer.live
+    
+    // Rate limiter (для защиты от flood атак)
+    val rateLimiterLayer = configLayer >>> RateLimiter.live
+    
+    // TCP сервер (теперь с rate limiter)
+    val tcpServerLayer = (tcpConfigLayer ++ rateLimiterLayer) >>> TcpServer.liveWithRateLimiter
     
     // Реестр соединений
     val registryLayer = ConnectionRegistry.live
     
     // Динамическая конфигурация
     val dynamicConfigLayer = (redisLayer ++ configLayer) >>> DynamicConfigService.live
+    
+    // Слушатель конфигурации устройств
+    val deviceConfigListenerLayer = (redisLayer ++ registryLayer ++ kafkaLayer) >>> DeviceConfigListener.live
     
     // Слои фильтров (теперь используют DynamicConfigService)
     val deadReckoningLayer = dynamicConfigLayer >>> DeadReckoningFilter.live
@@ -149,7 +175,7 @@ object Main extends ZIOAppDefault:
     val idleWatcherLayer = (registryLayer ++ dynamicConfigLayer ++ kafkaLayer ++ redisLayer ++ tcpConfigLayer) >>> IdleConnectionWatcher.live
     
     // Финальная композиция
-    configLayer ++ tcpServerLayer ++ processingServiceLayer ++ registryLayer ++ commandServiceLayer ++ dynamicConfigLayer ++ idleWatcherLayer
+    configLayer ++ tcpServerLayer ++ processingServiceLayer ++ registryLayer ++ commandServiceLayer ++ dynamicConfigLayer ++ idleWatcherLayer ++ deviceConfigListenerLayer ++ rateLimiterLayer
   
   override def run: ZIO[Any, Any, Any] =
     program

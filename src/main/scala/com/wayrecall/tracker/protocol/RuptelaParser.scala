@@ -19,6 +19,8 @@ import com.wayrecall.tracker.domain.{GpsRawPoint, ProtocolError, Command}
  */
 object RuptelaParser extends ProtocolParser:
   
+  override val protocolName: String = "ruptela"
+  
   private val CMD_RECORDS: Byte = 0x01
   private val CMD_EXTENDED_RECORDS: Byte = 0x02
   private val CMD_ACK: Byte = 0x64

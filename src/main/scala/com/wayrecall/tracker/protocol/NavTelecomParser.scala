@@ -17,6 +17,8 @@ import com.wayrecall.tracker.domain.{GpsRawPoint, ProtocolError, Command}
  */
 object NavTelecomParser extends ProtocolParser:
   
+  override val protocolName: String = "navtelecom"
+  
   private val SIGNATURE: Short = 0x2A3E  // "*>"
   private val MSG_FLEX: Short = 0xF100.toShort
   private val MSG_IDENT: Short = 0x0100.toShort

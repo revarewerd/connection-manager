@@ -90,6 +90,17 @@ object IdleConnectionWatcher:
     
     /**
      * Отключает соединение и отправляет уведомление в Kafka
+     * 
+     * Алгоритм:
+     * 1. Логируем причину отключения
+     * 2. Получаем vehicleId из Redis
+     * 3. Формируем DeviceStatus(isOnline=false)
+     * 4. Публикуем в Kafka топик device-status
+     * 5. Удаляем из Redis маппинг connection:{imei}
+     * 6. Закрываем Netty канал
+     * 7. Удаляем из in-memory реестра
+     * 
+     * Все ошибки игнорируются (UIO), чтобы гарантировать отключение
      */
     private def disconnectWithNotification(
         entry: ConnectionEntry, 
