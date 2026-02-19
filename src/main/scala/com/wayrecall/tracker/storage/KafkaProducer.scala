@@ -4,7 +4,7 @@ import zio.*
 import zio.json.*
 import org.apache.kafka.clients.producer.{KafkaProducer => JavaKafkaProducer, ProducerConfig, ProducerRecord, RecordMetadata, Callback}
 import org.apache.kafka.common.serialization.StringSerializer
-import com.wayrecall.tracker.domain.{GpsPoint, DeviceStatus, UnknownDeviceEvent, KafkaError}
+import com.wayrecall.tracker.domain.{GpsPoint, GpsEventMessage, DeviceStatus, UnknownDeviceEvent, UnknownGpsPoint, KafkaError}
 import com.wayrecall.tracker.config.KafkaConfig
 import java.util.Properties
 
@@ -19,8 +19,12 @@ import java.util.Properties
 trait KafkaProducer:
   def publish(topic: String, key: String, value: String): IO[KafkaError, Unit]
   def publishGpsEvent(point: GpsPoint): IO[KafkaError, Unit]
+  def publishGpsEventMessage(msg: GpsEventMessage): IO[KafkaError, Unit]
+  def publishGpsRulesEvent(msg: GpsEventMessage): IO[KafkaError, Unit]
+  def publishGpsRetranslationEvent(msg: GpsEventMessage): IO[KafkaError, Unit]
   def publishDeviceStatus(status: DeviceStatus): IO[KafkaError, Unit]
   def publishUnknownDevice(event: UnknownDeviceEvent): IO[KafkaError, Unit]
+  def publishUnknownGpsEvent(point: UnknownGpsPoint): IO[KafkaError, Unit]
 
 object KafkaProducer:
   
@@ -31,11 +35,23 @@ object KafkaProducer:
   def publishGpsEvent(point: GpsPoint): ZIO[KafkaProducer, KafkaError, Unit] =
     ZIO.serviceWithZIO(_.publishGpsEvent(point))
   
+  def publishGpsEventMessage(msg: GpsEventMessage): ZIO[KafkaProducer, KafkaError, Unit] =
+    ZIO.serviceWithZIO(_.publishGpsEventMessage(msg))
+  
+  def publishGpsRulesEvent(msg: GpsEventMessage): ZIO[KafkaProducer, KafkaError, Unit] =
+    ZIO.serviceWithZIO(_.publishGpsRulesEvent(msg))
+  
+  def publishGpsRetranslationEvent(msg: GpsEventMessage): ZIO[KafkaProducer, KafkaError, Unit] =
+    ZIO.serviceWithZIO(_.publishGpsRetranslationEvent(msg))
+  
   def publishDeviceStatus(status: DeviceStatus): ZIO[KafkaProducer, KafkaError, Unit] =
     ZIO.serviceWithZIO(_.publishDeviceStatus(status))
   
   def publishUnknownDevice(event: UnknownDeviceEvent): ZIO[KafkaProducer, KafkaError, Unit] =
     ZIO.serviceWithZIO(_.publishUnknownDevice(event))
+  
+  def publishUnknownGpsEvent(point: UnknownGpsPoint): ZIO[KafkaProducer, KafkaError, Unit] =
+    ZIO.serviceWithZIO(_.publishUnknownGpsEvent(point))
   
   /**
    * Live реализация с Java Kafka Producer
@@ -57,14 +73,25 @@ object KafkaProducer:
       }
     
     override def publishGpsEvent(point: GpsPoint): IO[KafkaError, Unit] =
-      serializeAndPublish(point, config.topics.rawGpsEvents, point.vehicleId.toString)
+      serializeAndPublish(point, config.topics.gpsEvents, point.vehicleId.toString)
+    
+    override def publishGpsEventMessage(msg: GpsEventMessage): IO[KafkaError, Unit] =
+      serializeAndPublish(msg, config.topics.gpsEvents, msg.vehicleId.toString)
+    
+    override def publishGpsRulesEvent(msg: GpsEventMessage): IO[KafkaError, Unit] =
+      serializeAndPublish(msg, config.topics.gpsEventsRules, msg.vehicleId.toString)
+    
+    override def publishGpsRetranslationEvent(msg: GpsEventMessage): IO[KafkaError, Unit] =
+      serializeAndPublish(msg, config.topics.gpsEventsRetranslation, msg.vehicleId.toString)
     
     override def publishDeviceStatus(status: DeviceStatus): IO[KafkaError, Unit] =
       serializeAndPublish(status, config.topics.deviceStatus, status.imei)
     
     override def publishUnknownDevice(event: UnknownDeviceEvent): IO[KafkaError, Unit] =
-      val topic = config.topics.unknownDevices.getOrElse("unknown-devices")
-      serializeAndPublish(event, topic, event.imei)
+      serializeAndPublish(event, config.topics.unknownDevices, event.imei)
+    
+    override def publishUnknownGpsEvent(point: UnknownGpsPoint): IO[KafkaError, Unit] =
+      serializeAndPublish(point, config.topics.unknownGpsEvents, point.imei)
     
     /**
      * Сериализует объект в JSON и публикует - чисто функциональный подход

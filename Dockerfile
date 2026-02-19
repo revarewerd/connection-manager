@@ -8,14 +8,23 @@
 # ============================================
 
 # Этап 1: Сборка
-FROM sbtscala/scala-sbt:eclipse-temurin-17.0.8.1_1_1.9.7_3.3.1 AS builder
+FROM eclipse-temurin:17-jdk AS builder
 
 WORKDIR /app
+
+# Устанавливаем SBT
+RUN apt-get update && \
+    apt-get install -y curl && \
+    echo "deb https://repo.scala-sbt.org/scalasbt/debian all main" | tee /etc/apt/sources.list.d/sbt.list && \
+    echo "deb https://repo.scala-sbt.org/scalasbt/debian /" | tee /etc/apt/sources.list.d/sbt_old.list && \
+    curl -sL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x2EE0EA64E40A89B84B2DF73499E82A75642AC823" | apt-key add && \
+    apt-get update && \
+    apt-get install -y sbt
 
 # Копируем файлы сборки для кэширования зависимостей
 COPY build.sbt .
 COPY project/build.properties project/
-COPY project/plugins.sbt project/ 2>/dev/null || true
+COPY project/plugins.sbt project/
 
 # Скачиваем зависимости (кэшируется Docker'ом)
 RUN sbt update
@@ -23,14 +32,8 @@ RUN sbt update
 # Копируем исходный код
 COPY src/ src/
 
-# Собираем fat JAR
-RUN sbt assembly || sbt "set assembly / assemblyMergeStrategy := { \
-  case PathList(\"META-INF\", xs @ _*) => MergeStrategy.discard \
-  case x => MergeStrategy.first \
-}; assembly"
-
-# Если assembly не настроен, собираем обычный JAR + зависимости
-RUN sbt stage 2>/dev/null || sbt packageBin
+# Собираем fat JAR (assemblyJarName := "connection-manager.jar")
+RUN sbt assembly
 
 # Этап 2: Runtime
 FROM eclipse-temurin:17-jre-alpine
@@ -40,8 +43,8 @@ LABEL description="Connection Manager - GPS трекер сервер"
 
 WORKDIR /app
 
-# Устанавливаем timezone
-RUN apk add --no-cache tzdata && \
+# Устанавливаем timezone и glibc для xerial-snappy
+RUN apk add --no-cache tzdata glibc glibc-bin libstdc++ && \
     cp /usr/share/zoneinfo/Europe/Moscow /etc/localtime && \
     echo "Europe/Moscow" > /etc/timezone
 
@@ -49,8 +52,8 @@ RUN apk add --no-cache tzdata && \
 RUN addgroup -S tracker && adduser -S tracker -G tracker
 USER tracker
 
-# Копируем JAR из builder
-COPY --from=builder /app/target/scala-*/connection-manager*.jar ./app.jar
+# Копируем JAR из builder (точное имя из build.sbt)
+COPY --from=builder /app/target/scala-3.4.0/connection-manager.jar ./app.jar
 
 # Копируем конфигурацию
 COPY src/main/resources/application.conf ./

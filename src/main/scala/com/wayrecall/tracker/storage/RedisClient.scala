@@ -6,7 +6,7 @@ import io.lettuce.core.{RedisClient => LettuceClient, RedisURI}
 import io.lettuce.core.api.StatefulRedisConnection
 import io.lettuce.core.api.async.RedisAsyncCommands
 import io.lettuce.core.pubsub.{RedisPubSubAdapter, StatefulRedisPubSubConnection}
-import com.wayrecall.tracker.domain.{GpsPoint, ConnectionInfo, RedisError}
+import com.wayrecall.tracker.domain.{GpsPoint, ConnectionInfo, RedisError, VehicleConfig, DeviceData}
 import com.wayrecall.tracker.config.RedisConfig
 import java.util.concurrent.CompletionStage
 import scala.jdk.FutureConverters.*
@@ -21,7 +21,19 @@ import scala.jdk.CollectionConverters.*
  * ✅ Fallback на PostgreSQL (опционально)
  */
 trait RedisClient:
+  // === Unified HASH device:{imei} (ОСНОВНОЙ ПАТТЕРН по документации) ===
+  /** HGETALL device:{imei} — все данные за 1 запрос */
+  def getDeviceData(imei: String): IO[RedisError, Option[DeviceData]]
+  /** HMSET device:{imei} — обновление position полей */
+  def updateDevicePosition(imei: String, fields: Map[String, String]): IO[RedisError, Unit]
+  /** HMSET device:{imei} — запись connection полей при подключении */
+  def setDeviceConnectionFields(imei: String, fields: Map[String, String]): IO[RedisError, Unit]
+  /** HDEL device:{imei} — очистка connection полей при отключении */
+  def clearDeviceConnectionFields(imei: String): IO[RedisError, Unit]
+
+  // === Legacy методы (обратная совместимость) ===
   def getVehicleId(imei: String): IO[RedisError, Option[Long]]
+  def getVehicleConfig(imei: String): IO[RedisError, Option[VehicleConfig]]
   def getPosition(vehicleId: Long): IO[RedisError, Option[GpsPoint]]
   def setPosition(point: GpsPoint): IO[RedisError, Unit]
   def registerConnection(info: ConnectionInfo): IO[RedisError, Unit]
@@ -37,6 +49,11 @@ trait RedisClient:
   def hgetall(key: String): Task[Map[String, String]]
   def get(key: String): Task[Option[String]]
   
+  // Sorted Set операции для pending commands
+  def zadd(key: String, score: Double, member: String): Task[Unit]
+  def zrange(key: String, start: Long, stop: Long): Task[List[String]]
+  def expire(key: String, seconds: Long): Task[Unit]
+  
   // Дополнительные методы для кеширования
   def setVehicleId(imei: String, vehicleId: Long, ttlSeconds: Long = 3600): IO[RedisError, Unit]
   def del(key: String): Task[Unit]
@@ -44,8 +61,26 @@ trait RedisClient:
 object RedisClient:
   
   // Accessor методы для ZIO service pattern
+  
+  // === Unified HASH ===
+  def getDeviceData(imei: String): ZIO[RedisClient, RedisError, Option[DeviceData]] =
+    ZIO.serviceWithZIO(_.getDeviceData(imei))
+  
+  def updateDevicePosition(imei: String, fields: Map[String, String]): ZIO[RedisClient, RedisError, Unit] =
+    ZIO.serviceWithZIO(_.updateDevicePosition(imei, fields))
+  
+  def setDeviceConnectionFields(imei: String, fields: Map[String, String]): ZIO[RedisClient, RedisError, Unit] =
+    ZIO.serviceWithZIO(_.setDeviceConnectionFields(imei, fields))
+  
+  def clearDeviceConnectionFields(imei: String): ZIO[RedisClient, RedisError, Unit] =
+    ZIO.serviceWithZIO(_.clearDeviceConnectionFields(imei))
+
+  // === Legacy ===
   def getVehicleId(imei: String): ZIO[RedisClient, RedisError, Option[Long]] =
     ZIO.serviceWithZIO(_.getVehicleId(imei))
+  
+  def getVehicleConfig(imei: String): ZIO[RedisClient, RedisError, Option[VehicleConfig]] =
+    ZIO.serviceWithZIO(_.getVehicleConfig(imei))
   
   def getPosition(vehicleId: Long): ZIO[RedisClient, RedisError, Option[GpsPoint]] =
     ZIO.serviceWithZIO(_.getPosition(vehicleId))
@@ -83,6 +118,15 @@ object RedisClient:
   def del(key: String): RIO[RedisClient, Unit] =
     ZIO.serviceWithZIO(_.del(key))
   
+  def zadd(key: String, score: Double, member: String): RIO[RedisClient, Unit] =
+    ZIO.serviceWithZIO(_.zadd(key, score, member))
+  
+  def zrange(key: String, start: Long, stop: Long): RIO[RedisClient, List[String]] =
+    ZIO.serviceWithZIO(_.zrange(key, start, stop))
+  
+  def expire(key: String, seconds: Long): RIO[RedisClient, Unit] =
+    ZIO.serviceWithZIO(_.expire(key, seconds))
+  
   /**
    * Live реализация с Lettuce
    */
@@ -94,13 +138,56 @@ object RedisClient:
   ) extends RedisClient:
     
     // Ключи Redis - чистые функции
+    /** Единый HASH ключ с ВСЕМИ данными об устройстве */
+    private def deviceKey(imei: String): String = s"device:$imei"
+    // Legacy ключи (оставлены для обратной совместимости)
     private def vehicleKey(imei: String): String = s"vehicle:$imei"
     private def positionKey(vehicleId: Long): String = s"position:$vehicleId"
     private def connectionKey(imei: String): String = s"connection:$imei"
     
+    // ═══════════════════════════════════════════════════════════════
+    // Unified HASH device:{imei} — HGETALL / HMSET / HDEL
+    // ═══════════════════════════════════════════════════════════════
+    
+    override def getDeviceData(imei: String): IO[RedisError, Option[DeviceData]] =
+      fromCompletionStage(commands.hgetall(deviceKey(imei)))
+        .map { javaMap =>
+          val hash = javaMap.asScala.toMap
+          if hash.isEmpty then None
+          else DeviceData.fromRedisHash(hash)
+        }
+        .mapError(e => RedisError.OperationFailed(e.getMessage))
+    
+    override def updateDevicePosition(imei: String, fields: Map[String, String]): IO[RedisError, Unit] =
+      fromCompletionStage(commands.hset(deviceKey(imei), fields.asJava))
+        .unit
+        .mapError(e => RedisError.OperationFailed(e.getMessage))
+    
+    override def setDeviceConnectionFields(imei: String, fields: Map[String, String]): IO[RedisError, Unit] =
+      fromCompletionStage(commands.hset(deviceKey(imei), fields.asJava))
+        .unit
+        .mapError(e => RedisError.OperationFailed(e.getMessage))
+    
+    override def clearDeviceConnectionFields(imei: String): IO[RedisError, Unit] =
+      fromCompletionStage(commands.hdel(deviceKey(imei), DeviceData.connectionFieldNames*))
+        .unit
+        .mapError(e => RedisError.OperationFailed(e.getMessage))
+    
+    // ═══════════════════════════════════════════════════════════════
+    // Legacy методы (vehicle:{imei}, position:{vehicleId}, connection:{imei})
+    // ═══════════════════════════════════════════════════════════════
+    
     override def getVehicleId(imei: String): IO[RedisError, Option[Long]] =
       fromCompletionStage(commands.get(vehicleKey(imei)))
         .map(Option(_).flatMap(_.toLongOption))
+        .mapError(e => RedisError.OperationFailed(e.getMessage))
+    
+    /** Загружает конфигурацию маршрутизации по IMEI из Redis (vehicle:config:{imei}) */
+    override def getVehicleConfig(imei: String): IO[RedisError, Option[VehicleConfig]] =
+      fromCompletionStage(commands.get(s"vehicle:config:$imei"))
+        .map { value =>
+          Option(value).flatMap(_.fromJson[VehicleConfig].toOption)
+        }
         .mapError(e => RedisError.OperationFailed(e.getMessage))
     
     override def getPosition(vehicleId: Long): IO[RedisError, Option[GpsPoint]] =
@@ -175,6 +262,15 @@ object RedisClient:
     
     override def del(key: String): Task[Unit] =
       fromCompletionStage(commands.del(key)).unit
+    
+    override def zadd(key: String, score: Double, member: String): Task[Unit] =
+      fromCompletionStage(commands.zadd(key, score, member)).unit
+    
+    override def zrange(key: String, start: Long, stop: Long): Task[List[String]] =
+      fromCompletionStage(commands.zrange(key, start, stop)).map(_.asScala.toList)
+    
+    override def expire(key: String, seconds: Long): Task[Unit] =
+      fromCompletionStage(commands.expire(key, seconds)).unit
     
     /**
      * Конвертирует Java CompletionStage в ZIO эффект

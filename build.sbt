@@ -46,6 +46,7 @@ lazy val root = project
       
       // Kafka
       "org.apache.kafka" % "kafka-clients" % "3.6.1",
+      "dev.zio" %% "zio-kafka" % "2.7.2",
       
       // Config
       "com.typesafe" % "config" % "1.4.3",

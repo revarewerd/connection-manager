@@ -1,0 +1,1525 @@
+{
+    "version": "1.4.0",
+    "project": {
+        "name": "root",
+        "directory": "/Users/wogul/vsCodeProjects/wayrecall-tracker/services/connection-manager",
+        "workspaceDir": "/Users/wogul/vsCodeProjects/wayrecall-tracker/services/connection-manager",
+        "sources": [
+            "/Users/wogul/vsCodeProjects/wayrecall-tracker/services/connection-manager/src/main/scala",
+            "/Users/wogul/vsCodeProjects/wayrecall-tracker/services/connection-manager/src/main/scala-3",
+            "/Users/wogul/vsCodeProjects/wayrecall-tracker/services/connection-manager/src/main/java",
+            "/Users/wogul/vsCodeProjects/wayrecall-tracker/services/connection-manager/target/scala-3.4.0/src_managed/main"
+        ],
+        "dependencies": [
+            
+        ],
+        "classpath": [
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala3-library_3/3.4.0/scala3-library_3-3.4.0.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio_3/2.0.20/zio_3-2.0.20.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-streams_3/2.0.20/zio-streams_3-2.0.20.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-config_3/4.0.1/zio-config_3-4.0.1.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-config-typesafe_3/4.0.1/zio-config-typesafe_3-4.0.1.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-config-magnolia_3/4.0.1/zio-config-magnolia_3-4.0.1.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-logging_3/2.1.16/zio-logging_3-2.1.16.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-logging-slf4j_3/2.1.16/zio-logging-slf4j_3-2.1.16.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-json_3/0.6.2/zio-json_3-0.6.2.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-all/4.1.104.Final/netty-all-4.1.104.Final.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/lettuce/lettuce-core/6.3.2.RELEASE/lettuce-core-6.3.2.RELEASE.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-http_3/3.0.0-RC4/zio-http_3-3.0.0-RC4.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/apache/kafka/kafka-clients/3.6.1/kafka-clients-3.6.1.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/typesafe/config/1.4.3/config-1.4.3.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/ch/qos/logback/logback-classic/1.4.14/logback-classic-1.4.14.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala-library/2.13.12/scala-library-2.13.12.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-internal-macros_3/2.0.20/zio-internal-macros_3-2.0.20.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-stacktracer_3/2.0.20/zio-stacktracer_3-2.0.20.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/izumi-reflect_3/2.3.8/izumi-reflect_3-2.3.8.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/modules/scala-collection-compat_3/2.9.0/scala-collection-compat_3-2.9.0.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-config-derivation_3/4.0.1/zio-config-derivation_3-4.0.1.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-parser_3/0.1.9/zio-parser_3-0.1.9.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/slf4j/slf4j-api/2.0.7/slf4j-api-2.0.7.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/softwaremill/magnolia1_3/magnolia_3/1.3.0/magnolia_3-1.3.0.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-buffer/4.1.107.Final/netty-buffer-4.1.107.Final.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec/4.1.107.Final/netty-codec-4.1.107.Final.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-dns/4.1.104.Final/netty-codec-dns-4.1.104.Final.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-haproxy/4.1.104.Final/netty-codec-haproxy-4.1.104.Final.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-http/4.1.104.Final/netty-codec-http-4.1.104.Final.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-http2/4.1.104.Final/netty-codec-http2-4.1.104.Final.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-memcache/4.1.104.Final/netty-codec-memcache-4.1.104.Final.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-mqtt/4.1.104.Final/netty-codec-mqtt-4.1.104.Final.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-redis/4.1.104.Final/netty-codec-redis-4.1.104.Final.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-smtp/4.1.104.Final/netty-codec-smtp-4.1.104.Final.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-socks/4.1.104.Final/netty-codec-socks-4.1.104.Final.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-stomp/4.1.104.Final/netty-codec-stomp-4.1.104.Final.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-xml/4.1.104.Final/netty-codec-xml-4.1.104.Final.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-common/4.1.107.Final/netty-common-4.1.107.Final.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-handler/4.1.107.Final/netty-handler-4.1.107.Final.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-native-unix-common/4.1.107.Final/netty-transport-native-unix-common-4.1.107.Final.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-handler-proxy/4.1.104.Final/netty-handler-proxy-4.1.104.Final.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-handler-ssl-ocsp/4.1.104.Final/netty-handler-ssl-ocsp-4.1.104.Final.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-resolver/4.1.107.Final/netty-resolver-4.1.107.Final.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-resolver-dns/4.1.104.Final/netty-resolver-dns-4.1.104.Final.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport/4.1.107.Final/netty-transport-4.1.107.Final.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-rxtx/4.1.104.Final/netty-transport-rxtx-4.1.104.Final.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-sctp/4.1.104.Final/netty-transport-sctp-4.1.104.Final.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-udt/4.1.104.Final/netty-transport-udt-4.1.104.Final.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-classes-epoll/4.1.104.Final/netty-transport-classes-epoll-4.1.104.Final.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-classes-kqueue/4.1.104.Final/netty-transport-classes-kqueue-4.1.104.Final.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-resolver-dns-classes-macos/4.1.104.Final/netty-resolver-dns-classes-macos-4.1.104.Final.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-native-epoll/4.1.104.Final/netty-transport-native-epoll-4.1.104.Final-linux-x86_64.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-native-epoll/4.1.104.Final/netty-transport-native-epoll-4.1.104.Final-linux-aarch_64.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-native-epoll/4.1.104.Final/netty-transport-native-epoll-4.1.104.Final-linux-riscv64.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-native-kqueue/4.1.104.Final/netty-transport-native-kqueue-4.1.104.Final-osx-x86_64.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-native-kqueue/4.1.104.Final/netty-transport-native-kqueue-4.1.104.Final-osx-aarch_64.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-resolver-dns-native-macos/4.1.104.Final/netty-resolver-dns-native-macos-4.1.104.Final-osx-x86_64.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-resolver-dns-native-macos/4.1.104.Final/netty-resolver-dns-native-macos-4.1.104.Final-osx-aarch_64.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/projectreactor/reactor-core/3.6.4/reactor-core-3.6.4.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-native-epoll/4.1.104.Final/netty-transport-native-epoll-4.1.104.Final.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-native-kqueue/4.1.104.Final/netty-transport-native-kqueue-4.1.104.Final.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-schema_3/0.4.16/zio-schema_3-0.4.16.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-schema-json_3/0.4.16/zio-schema-json_3-0.4.16.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-schema-protobuf_3/0.4.16/zio-schema-protobuf_3-0.4.16.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/incubator/netty-incubator-transport-native-io_uring/0.0.24.Final/netty-incubator-transport-native-io_uring-0.0.24.Final-linux-x86_64.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/github/luben/zstd-jni/1.5.5-1/zstd-jni-1.5.5-1.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/lz4/lz4-java/1.8.0/lz4-java-1.8.0.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/xerial/snappy/snappy-java/1.1.10.5/snappy-java-1.1.10.5.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/ch/qos/logback/logback-core/1.4.14/logback-core-1.4.14.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/izumi-reflect-thirdparty-boopickle-shaded_3/2.3.8/izumi-reflect-thirdparty-boopickle-shaded_3-2.3.8.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/reactivestreams/reactive-streams/1.0.4/reactive-streams-1.0.4.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-schema-macros_3/0.4.16/zio-schema-macros_3-0.4.16.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-prelude_3/1.0.0-RC21/zio-prelude_3-1.0.0-RC21.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-constraintless_3/0.3.2/zio-constraintless_3-0.3.2.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-schema-derivation_3/0.4.16/zio-schema-derivation_3-0.4.16.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/incubator/netty-incubator-transport-classes-io_uring/0.0.24.Final/netty-incubator-transport-classes-io_uring-0.0.24.Final.jar",
+            "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-prelude-macros_3/1.0.0-RC21/zio-prelude-macros_3-1.0.0-RC21.jar"
+        ],
+        "out": "/Users/wogul/vsCodeProjects/wayrecall-tracker/services/connection-manager/.bloop/root",
+        "classesDir": "/Users/wogul/vsCodeProjects/wayrecall-tracker/services/connection-manager/.bloop/root/scala-3.4.0/classes",
+        "resources": [
+            "/Users/wogul/vsCodeProjects/wayrecall-tracker/services/connection-manager/src/main/resources",
+            "/Users/wogul/vsCodeProjects/wayrecall-tracker/services/connection-manager/target/scala-3.4.0/resource_managed/main"
+        ],
+        "scala": {
+            "organization": "org.scala-lang",
+            "name": "scala-compiler",
+            "version": "3.4.0",
+            "options": [
+                
+            ],
+            "jars": [
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala3-library_3/3.4.0/scala3-library_3-3.4.0.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala-library/2.13.12/scala-library-2.13.12.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala3-compiler_3/3.4.0/scala3-compiler_3-3.4.0.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala3-interfaces/3.4.0/scala3-interfaces-3.4.0.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/tasty-core_3/3.4.0/tasty-core_3-3.4.0.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/modules/scala-asm/9.6.0-scala-1/scala-asm-9.6.0-scala-1.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/scala-sbt/compiler-interface/1.9.3/compiler-interface-1.9.3.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/jline/jline-reader/3.19.0/jline-reader-3.19.0.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/jline/jline-terminal/3.19.0/jline-terminal-3.19.0.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/jline/jline-terminal-jna/3.19.0/jline-terminal-jna-3.19.0.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/scala-sbt/util-interface/1.9.2/util-interface-1.9.2.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/net/java/dev/jna/jna/5.3.1/jna-5.3.1.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scaladoc_3/3.4.0/scaladoc_3-3.4.0.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala3-tasty-inspector_3/3.4.0/scala3-tasty-inspector_3-3.4.0.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/vladsch/flexmark/flexmark/0.62.2/flexmark-0.62.2.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/vladsch/flexmark/flexmark-util-ast/0.62.2/flexmark-util-ast-0.62.2.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/vladsch/flexmark/flexmark-util-data/0.62.2/flexmark-util-data-0.62.2.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/vladsch/flexmark/flexmark-util-html/0.62.2/flexmark-util-html-0.62.2.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/vladsch/flexmark/flexmark-ext-anchorlink/0.62.2/flexmark-ext-anchorlink-0.62.2.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/vladsch/flexmark/flexmark-ext-autolink/0.62.2/flexmark-ext-autolink-0.62.2.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/vladsch/flexmark/flexmark-ext-emoji/0.62.2/flexmark-ext-emoji-0.62.2.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/vladsch/flexmark/flexmark-ext-gfm-strikethrough/0.62.2/flexmark-ext-gfm-strikethrough-0.62.2.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/vladsch/flexmark/flexmark-ext-gfm-tasklist/0.62.2/flexmark-ext-gfm-tasklist-0.62.2.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/vladsch/flexmark/flexmark-ext-wikilink/0.62.2/flexmark-ext-wikilink-0.62.2.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/vladsch/flexmark/flexmark-ext-tables/0.62.2/flexmark-ext-tables-0.62.2.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/vladsch/flexmark/flexmark-ext-yaml-front-matter/0.62.2/flexmark-ext-yaml-front-matter-0.62.2.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/nl/big-o/liqp/0.8.2/liqp-0.8.2.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/jsoup/jsoup/1.17.2/jsoup-1.17.2.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/fasterxml/jackson/dataformat/jackson-dataformat-yaml/2.15.1/jackson-dataformat-yaml-2.15.1.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/vladsch/flexmark/flexmark-util-builder/0.62.2/flexmark-util-builder-0.62.2.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/vladsch/flexmark/flexmark-util-collection/0.62.2/flexmark-util-collection-0.62.2.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/vladsch/flexmark/flexmark-util-dependency/0.62.2/flexmark-util-dependency-0.62.2.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/vladsch/flexmark/flexmark-util-format/0.62.2/flexmark-util-format-0.62.2.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/vladsch/flexmark/flexmark-util-misc/0.62.2/flexmark-util-misc-0.62.2.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/vladsch/flexmark/flexmark-util-sequence/0.62.2/flexmark-util-sequence-0.62.2.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/vladsch/flexmark/flexmark-util-visitor/0.62.2/flexmark-util-visitor-0.62.2.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/jetbrains/annotations/15.0/annotations-15.0.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/vladsch/flexmark/flexmark-util/0.62.2/flexmark-util-0.62.2.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/nibor/autolink/autolink/0.6.0/autolink-0.6.0.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/vladsch/flexmark/flexmark-jira-converter/0.62.2/flexmark-jira-converter-0.62.2.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/antlr/antlr4-runtime/4.7.2/antlr4-runtime-4.7.2.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-annotations/2.15.1/jackson-annotations-2.15.1.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-core/2.15.1/jackson-core-2.15.1.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-databind/2.15.1/jackson-databind-2.15.1.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/fasterxml/jackson/datatype/jackson-datatype-jsr310/2.12.1/jackson-datatype-jsr310-2.12.1.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/ua/co/k/strftime4j/1.0.5/strftime4j-1.0.5.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/yaml/snakeyaml/2.0/snakeyaml-2.0.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/vladsch/flexmark/flexmark-util-options/0.62.2/flexmark-util-options-0.62.2.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/vladsch/flexmark/flexmark-ext-ins/0.62.2/flexmark-ext-ins-0.62.2.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/vladsch/flexmark/flexmark-ext-superscript/0.62.2/flexmark-ext-superscript-0.62.2.jar"
+            ],
+            "setup": {
+                "order": "mixed",
+                "addLibraryToBootClasspath": true,
+                "addCompilerToClasspath": false,
+                "addExtraJarsToClasspath": false,
+                "manageBootClasspath": true,
+                "filterLibraryFromClasspath": true
+            },
+            "bridgeJars": [
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala3-sbt-bridge/3.4.0/scala3-sbt-bridge-3.4.0.jar"
+            ]
+        },
+        "java": {
+            "options": [
+                
+            ]
+        },
+        "test": {
+            "frameworks": [
+                {
+                    "names": [
+                        "org.scalacheck.ScalaCheckFramework"
+                    ]
+                },
+                {
+                    "names": [
+                        "org.specs2.runner.Specs2Framework",
+                        "org.specs2.runner.SpecsFramework"
+                    ]
+                },
+                {
+                    "names": [
+                        "org.specs.runner.SpecsFramework"
+                    ]
+                },
+                {
+                    "names": [
+                        "org.scalatest.tools.Framework",
+                        "org.scalatest.tools.ScalaTestFramework"
+                    ]
+                },
+                {
+                    "names": [
+                        "com.novocode.junit.JUnitFramework"
+                    ]
+                },
+                {
+                    "names": [
+                        "munit.Framework"
+                    ]
+                },
+                {
+                    "names": [
+                        "zio.test.sbt.ZTestFramework"
+                    ]
+                },
+                {
+                    "names": [
+                        "weaver.framework.CatsEffect"
+                    ]
+                },
+                {
+                    "names": [
+                        "hedgehog.sbt.Framework"
+                    ]
+                },
+                {
+                    "names": [
+                        "zio.test.sbt.ZTestFramework"
+                    ]
+                }
+            ],
+            "options": {
+                "excludes": [
+                    
+                ],
+                "arguments": [
+                    
+                ]
+            }
+        },
+        "platform": {
+            "name": "jvm",
+            "config": {
+                "home": "/Users/wogul/Library/Java/JavaVirtualMachines/corretto-23.0.2/Contents/Home",
+                "options": [
+                    "-Duser.dir=/Users/wogul/vsCodeProjects/wayrecall-tracker/services/connection-manager"
+                ]
+            },
+            "mainClass": [
+                
+            ],
+            "runtimeConfig": {
+                "home": "/Users/wogul/Library/Java/JavaVirtualMachines/corretto-23.0.2/Contents/Home",
+                "options": [
+                    "-Duser.dir=/Users/wogul/vsCodeProjects/wayrecall-tracker/services/connection-manager"
+                ]
+            },
+            "classpath": [
+                "/Users/wogul/vsCodeProjects/wayrecall-tracker/services/connection-manager/.bloop/root/scala-3.4.0/classes",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala3-library_3/3.4.0/scala3-library_3-3.4.0.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio_3/2.0.20/zio_3-2.0.20.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-streams_3/2.0.20/zio-streams_3-2.0.20.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-config_3/4.0.1/zio-config_3-4.0.1.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-config-typesafe_3/4.0.1/zio-config-typesafe_3-4.0.1.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-config-magnolia_3/4.0.1/zio-config-magnolia_3-4.0.1.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-logging_3/2.1.16/zio-logging_3-2.1.16.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-logging-slf4j_3/2.1.16/zio-logging-slf4j_3-2.1.16.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-json_3/0.6.2/zio-json_3-0.6.2.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-all/4.1.104.Final/netty-all-4.1.104.Final.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/lettuce/lettuce-core/6.3.2.RELEASE/lettuce-core-6.3.2.RELEASE.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-http_3/3.0.0-RC4/zio-http_3-3.0.0-RC4.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/apache/kafka/kafka-clients/3.6.1/kafka-clients-3.6.1.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/typesafe/config/1.4.3/config-1.4.3.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/ch/qos/logback/logback-classic/1.4.14/logback-classic-1.4.14.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala-library/2.13.12/scala-library-2.13.12.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-internal-macros_3/2.0.20/zio-internal-macros_3-2.0.20.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-stacktracer_3/2.0.20/zio-stacktracer_3-2.0.20.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/izumi-reflect_3/2.3.8/izumi-reflect_3-2.3.8.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/modules/scala-collection-compat_3/2.9.0/scala-collection-compat_3-2.9.0.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-config-derivation_3/4.0.1/zio-config-derivation_3-4.0.1.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-parser_3/0.1.9/zio-parser_3-0.1.9.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/slf4j/slf4j-api/2.0.7/slf4j-api-2.0.7.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/softwaremill/magnolia1_3/magnolia_3/1.3.0/magnolia_3-1.3.0.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-buffer/4.1.107.Final/netty-buffer-4.1.107.Final.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec/4.1.107.Final/netty-codec-4.1.107.Final.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-dns/4.1.104.Final/netty-codec-dns-4.1.104.Final.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-haproxy/4.1.104.Final/netty-codec-haproxy-4.1.104.Final.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-http/4.1.104.Final/netty-codec-http-4.1.104.Final.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-http2/4.1.104.Final/netty-codec-http2-4.1.104.Final.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-memcache/4.1.104.Final/netty-codec-memcache-4.1.104.Final.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-mqtt/4.1.104.Final/netty-codec-mqtt-4.1.104.Final.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-redis/4.1.104.Final/netty-codec-redis-4.1.104.Final.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-smtp/4.1.104.Final/netty-codec-smtp-4.1.104.Final.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-socks/4.1.104.Final/netty-codec-socks-4.1.104.Final.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-stomp/4.1.104.Final/netty-codec-stomp-4.1.104.Final.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-xml/4.1.104.Final/netty-codec-xml-4.1.104.Final.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-common/4.1.107.Final/netty-common-4.1.107.Final.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-handler/4.1.107.Final/netty-handler-4.1.107.Final.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-native-unix-common/4.1.107.Final/netty-transport-native-unix-common-4.1.107.Final.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-handler-proxy/4.1.104.Final/netty-handler-proxy-4.1.104.Final.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-handler-ssl-ocsp/4.1.104.Final/netty-handler-ssl-ocsp-4.1.104.Final.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-resolver/4.1.107.Final/netty-resolver-4.1.107.Final.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-resolver-dns/4.1.104.Final/netty-resolver-dns-4.1.104.Final.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport/4.1.107.Final/netty-transport-4.1.107.Final.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-rxtx/4.1.104.Final/netty-transport-rxtx-4.1.104.Final.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-sctp/4.1.104.Final/netty-transport-sctp-4.1.104.Final.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-udt/4.1.104.Final/netty-transport-udt-4.1.104.Final.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-classes-epoll/4.1.104.Final/netty-transport-classes-epoll-4.1.104.Final.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-classes-kqueue/4.1.104.Final/netty-transport-classes-kqueue-4.1.104.Final.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-resolver-dns-classes-macos/4.1.104.Final/netty-resolver-dns-classes-macos-4.1.104.Final.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-native-epoll/4.1.104.Final/netty-transport-native-epoll-4.1.104.Final-linux-x86_64.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-native-epoll/4.1.104.Final/netty-transport-native-epoll-4.1.104.Final-linux-aarch_64.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-native-epoll/4.1.104.Final/netty-transport-native-epoll-4.1.104.Final-linux-riscv64.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-native-kqueue/4.1.104.Final/netty-transport-native-kqueue-4.1.104.Final-osx-x86_64.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-native-kqueue/4.1.104.Final/netty-transport-native-kqueue-4.1.104.Final-osx-aarch_64.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-resolver-dns-native-macos/4.1.104.Final/netty-resolver-dns-native-macos-4.1.104.Final-osx-x86_64.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-resolver-dns-native-macos/4.1.104.Final/netty-resolver-dns-native-macos-4.1.104.Final-osx-aarch_64.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/projectreactor/reactor-core/3.6.4/reactor-core-3.6.4.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-native-epoll/4.1.104.Final/netty-transport-native-epoll-4.1.104.Final.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-native-kqueue/4.1.104.Final/netty-transport-native-kqueue-4.1.104.Final.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-schema_3/0.4.16/zio-schema_3-0.4.16.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-schema-json_3/0.4.16/zio-schema-json_3-0.4.16.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-schema-protobuf_3/0.4.16/zio-schema-protobuf_3-0.4.16.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/incubator/netty-incubator-transport-native-io_uring/0.0.24.Final/netty-incubator-transport-native-io_uring-0.0.24.Final-linux-x86_64.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/github/luben/zstd-jni/1.5.5-1/zstd-jni-1.5.5-1.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/lz4/lz4-java/1.8.0/lz4-java-1.8.0.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/xerial/snappy/snappy-java/1.1.10.5/snappy-java-1.1.10.5.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/ch/qos/logback/logback-core/1.4.14/logback-core-1.4.14.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/izumi-reflect-thirdparty-boopickle-shaded_3/2.3.8/izumi-reflect-thirdparty-boopickle-shaded_3-2.3.8.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/reactivestreams/reactive-streams/1.0.4/reactive-streams-1.0.4.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-schema-macros_3/0.4.16/zio-schema-macros_3-0.4.16.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-prelude_3/1.0.0-RC21/zio-prelude_3-1.0.0-RC21.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-constraintless_3/0.3.2/zio-constraintless_3-0.3.2.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-schema-derivation_3/0.4.16/zio-schema-derivation_3-0.4.16.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/incubator/netty-incubator-transport-classes-io_uring/0.0.24.Final/netty-incubator-transport-classes-io_uring-0.0.24.Final.jar",
+                "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-prelude-macros_3/1.0.0-RC21/zio-prelude-macros_3-1.0.0-RC21.jar"
+            ]
+        },
+        "resolution": {
+            "modules": [
+                {
+                    "organization": "org.scala-lang",
+                    "name": "scala3-library_3",
+                    "version": "3.4.0",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "scala3-library_3",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala3-library_3/3.4.0/scala3-library_3-3.4.0.jar"
+                        },
+                        {
+                            "name": "scala3-library_3",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala3-library_3/3.4.0/scala3-library_3-3.4.0-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "dev.zio",
+                    "name": "zio_3",
+                    "version": "2.0.20",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "zio_3",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio_3/2.0.20/zio_3-2.0.20.jar"
+                        },
+                        {
+                            "name": "zio_3",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio_3/2.0.20/zio_3-2.0.20-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "dev.zio",
+                    "name": "zio-streams_3",
+                    "version": "2.0.20",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "zio-streams_3",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-streams_3/2.0.20/zio-streams_3-2.0.20.jar"
+                        },
+                        {
+                            "name": "zio-streams_3",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-streams_3/2.0.20/zio-streams_3-2.0.20-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "dev.zio",
+                    "name": "zio-config_3",
+                    "version": "4.0.1",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "zio-config_3",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-config_3/4.0.1/zio-config_3-4.0.1.jar"
+                        },
+                        {
+                            "name": "zio-config_3",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-config_3/4.0.1/zio-config_3-4.0.1-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "dev.zio",
+                    "name": "zio-config-typesafe_3",
+                    "version": "4.0.1",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "zio-config-typesafe_3",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-config-typesafe_3/4.0.1/zio-config-typesafe_3-4.0.1.jar"
+                        },
+                        {
+                            "name": "zio-config-typesafe_3",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-config-typesafe_3/4.0.1/zio-config-typesafe_3-4.0.1-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "dev.zio",
+                    "name": "zio-config-magnolia_3",
+                    "version": "4.0.1",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "zio-config-magnolia_3",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-config-magnolia_3/4.0.1/zio-config-magnolia_3-4.0.1.jar"
+                        },
+                        {
+                            "name": "zio-config-magnolia_3",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-config-magnolia_3/4.0.1/zio-config-magnolia_3-4.0.1-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "dev.zio",
+                    "name": "zio-logging_3",
+                    "version": "2.1.16",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "zio-logging_3",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-logging_3/2.1.16/zio-logging_3-2.1.16.jar"
+                        },
+                        {
+                            "name": "zio-logging_3",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-logging_3/2.1.16/zio-logging_3-2.1.16-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "dev.zio",
+                    "name": "zio-logging-slf4j_3",
+                    "version": "2.1.16",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "zio-logging-slf4j_3",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-logging-slf4j_3/2.1.16/zio-logging-slf4j_3-2.1.16.jar"
+                        },
+                        {
+                            "name": "zio-logging-slf4j_3",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-logging-slf4j_3/2.1.16/zio-logging-slf4j_3-2.1.16-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "dev.zio",
+                    "name": "zio-json_3",
+                    "version": "0.6.2",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "zio-json_3",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-json_3/0.6.2/zio-json_3-0.6.2.jar"
+                        },
+                        {
+                            "name": "zio-json_3",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-json_3/0.6.2/zio-json_3-0.6.2-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "io.netty",
+                    "name": "netty-all",
+                    "version": "4.1.104.Final",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "netty-all",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-all/4.1.104.Final/netty-all-4.1.104.Final.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "io.lettuce",
+                    "name": "lettuce-core",
+                    "version": "6.3.2.RELEASE",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "lettuce-core",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/lettuce/lettuce-core/6.3.2.RELEASE/lettuce-core-6.3.2.RELEASE.jar"
+                        },
+                        {
+                            "name": "lettuce-core",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/lettuce/lettuce-core/6.3.2.RELEASE/lettuce-core-6.3.2.RELEASE-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "dev.zio",
+                    "name": "zio-http_3",
+                    "version": "3.0.0-RC4",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "zio-http_3",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-http_3/3.0.0-RC4/zio-http_3-3.0.0-RC4.jar"
+                        },
+                        {
+                            "name": "zio-http_3",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-http_3/3.0.0-RC4/zio-http_3-3.0.0-RC4-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.apache.kafka",
+                    "name": "kafka-clients",
+                    "version": "3.6.1",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "kafka-clients",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/apache/kafka/kafka-clients/3.6.1/kafka-clients-3.6.1.jar"
+                        },
+                        {
+                            "name": "kafka-clients",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/apache/kafka/kafka-clients/3.6.1/kafka-clients-3.6.1-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "com.typesafe",
+                    "name": "config",
+                    "version": "1.4.3",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "config",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/typesafe/config/1.4.3/config-1.4.3.jar"
+                        },
+                        {
+                            "name": "config",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/typesafe/config/1.4.3/config-1.4.3-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "ch.qos.logback",
+                    "name": "logback-classic",
+                    "version": "1.4.14",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "logback-classic",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/ch/qos/logback/logback-classic/1.4.14/logback-classic-1.4.14.jar"
+                        },
+                        {
+                            "name": "logback-classic",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/ch/qos/logback/logback-classic/1.4.14/logback-classic-1.4.14-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.scala-lang",
+                    "name": "scala-library",
+                    "version": "2.13.12",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "scala-library",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala-library/2.13.12/scala-library-2.13.12.jar"
+                        },
+                        {
+                            "name": "scala-library",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala-library/2.13.12/scala-library-2.13.12-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "dev.zio",
+                    "name": "zio-internal-macros_3",
+                    "version": "2.0.20",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "zio-internal-macros_3",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-internal-macros_3/2.0.20/zio-internal-macros_3-2.0.20.jar"
+                        },
+                        {
+                            "name": "zio-internal-macros_3",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-internal-macros_3/2.0.20/zio-internal-macros_3-2.0.20-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "dev.zio",
+                    "name": "zio-stacktracer_3",
+                    "version": "2.0.20",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "zio-stacktracer_3",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-stacktracer_3/2.0.20/zio-stacktracer_3-2.0.20.jar"
+                        },
+                        {
+                            "name": "zio-stacktracer_3",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-stacktracer_3/2.0.20/zio-stacktracer_3-2.0.20-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "dev.zio",
+                    "name": "izumi-reflect_3",
+                    "version": "2.3.8",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "izumi-reflect_3",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/izumi-reflect_3/2.3.8/izumi-reflect_3-2.3.8.jar"
+                        },
+                        {
+                            "name": "izumi-reflect_3",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/izumi-reflect_3/2.3.8/izumi-reflect_3-2.3.8-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.scala-lang.modules",
+                    "name": "scala-collection-compat_3",
+                    "version": "2.9.0",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "scala-collection-compat_3",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/modules/scala-collection-compat_3/2.9.0/scala-collection-compat_3-2.9.0.jar"
+                        },
+                        {
+                            "name": "scala-collection-compat_3",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/modules/scala-collection-compat_3/2.9.0/scala-collection-compat_3-2.9.0-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "dev.zio",
+                    "name": "zio-config-derivation_3",
+                    "version": "4.0.1",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "zio-config-derivation_3",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-config-derivation_3/4.0.1/zio-config-derivation_3-4.0.1.jar"
+                        },
+                        {
+                            "name": "zio-config-derivation_3",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-config-derivation_3/4.0.1/zio-config-derivation_3-4.0.1-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "dev.zio",
+                    "name": "zio-parser_3",
+                    "version": "0.1.9",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "zio-parser_3",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-parser_3/0.1.9/zio-parser_3-0.1.9.jar"
+                        },
+                        {
+                            "name": "zio-parser_3",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-parser_3/0.1.9/zio-parser_3-0.1.9-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.slf4j",
+                    "name": "slf4j-api",
+                    "version": "2.0.7",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "slf4j-api",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/slf4j/slf4j-api/2.0.7/slf4j-api-2.0.7.jar"
+                        },
+                        {
+                            "name": "slf4j-api",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/slf4j/slf4j-api/2.0.7/slf4j-api-2.0.7-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "com.softwaremill.magnolia1_3",
+                    "name": "magnolia_3",
+                    "version": "1.3.0",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "magnolia_3",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/softwaremill/magnolia1_3/magnolia_3/1.3.0/magnolia_3-1.3.0.jar"
+                        },
+                        {
+                            "name": "magnolia_3",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/softwaremill/magnolia1_3/magnolia_3/1.3.0/magnolia_3-1.3.0-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "io.netty",
+                    "name": "netty-buffer",
+                    "version": "4.1.107.Final",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "netty-buffer",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-buffer/4.1.107.Final/netty-buffer-4.1.107.Final.jar"
+                        },
+                        {
+                            "name": "netty-buffer",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-buffer/4.1.107.Final/netty-buffer-4.1.107.Final-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "io.netty",
+                    "name": "netty-codec",
+                    "version": "4.1.107.Final",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "netty-codec",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec/4.1.107.Final/netty-codec-4.1.107.Final.jar"
+                        },
+                        {
+                            "name": "netty-codec",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec/4.1.107.Final/netty-codec-4.1.107.Final-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "io.netty",
+                    "name": "netty-codec-dns",
+                    "version": "4.1.104.Final",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "netty-codec-dns",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-dns/4.1.104.Final/netty-codec-dns-4.1.104.Final.jar"
+                        },
+                        {
+                            "name": "netty-codec-dns",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-dns/4.1.104.Final/netty-codec-dns-4.1.104.Final-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "io.netty",
+                    "name": "netty-codec-haproxy",
+                    "version": "4.1.104.Final",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "netty-codec-haproxy",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-haproxy/4.1.104.Final/netty-codec-haproxy-4.1.104.Final.jar"
+                        },
+                        {
+                            "name": "netty-codec-haproxy",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-haproxy/4.1.104.Final/netty-codec-haproxy-4.1.104.Final-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "io.netty",
+                    "name": "netty-codec-http",
+                    "version": "4.1.104.Final",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "netty-codec-http",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-http/4.1.104.Final/netty-codec-http-4.1.104.Final.jar"
+                        },
+                        {
+                            "name": "netty-codec-http",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-http/4.1.104.Final/netty-codec-http-4.1.104.Final-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "io.netty",
+                    "name": "netty-codec-http2",
+                    "version": "4.1.104.Final",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "netty-codec-http2",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-http2/4.1.104.Final/netty-codec-http2-4.1.104.Final.jar"
+                        },
+                        {
+                            "name": "netty-codec-http2",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-http2/4.1.104.Final/netty-codec-http2-4.1.104.Final-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "io.netty",
+                    "name": "netty-codec-memcache",
+                    "version": "4.1.104.Final",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "netty-codec-memcache",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-memcache/4.1.104.Final/netty-codec-memcache-4.1.104.Final.jar"
+                        },
+                        {
+                            "name": "netty-codec-memcache",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-memcache/4.1.104.Final/netty-codec-memcache-4.1.104.Final-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "io.netty",
+                    "name": "netty-codec-mqtt",
+                    "version": "4.1.104.Final",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "netty-codec-mqtt",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-mqtt/4.1.104.Final/netty-codec-mqtt-4.1.104.Final.jar"
+                        },
+                        {
+                            "name": "netty-codec-mqtt",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-mqtt/4.1.104.Final/netty-codec-mqtt-4.1.104.Final-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "io.netty",
+                    "name": "netty-codec-redis",
+                    "version": "4.1.104.Final",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "netty-codec-redis",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-redis/4.1.104.Final/netty-codec-redis-4.1.104.Final.jar"
+                        },
+                        {
+                            "name": "netty-codec-redis",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-redis/4.1.104.Final/netty-codec-redis-4.1.104.Final-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "io.netty",
+                    "name": "netty-codec-smtp",
+                    "version": "4.1.104.Final",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "netty-codec-smtp",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-smtp/4.1.104.Final/netty-codec-smtp-4.1.104.Final.jar"
+                        },
+                        {
+                            "name": "netty-codec-smtp",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-smtp/4.1.104.Final/netty-codec-smtp-4.1.104.Final-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "io.netty",
+                    "name": "netty-codec-socks",
+                    "version": "4.1.104.Final",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "netty-codec-socks",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-socks/4.1.104.Final/netty-codec-socks-4.1.104.Final.jar"
+                        },
+                        {
+                            "name": "netty-codec-socks",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-socks/4.1.104.Final/netty-codec-socks-4.1.104.Final-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "io.netty",
+                    "name": "netty-codec-stomp",
+                    "version": "4.1.104.Final",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "netty-codec-stomp",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-stomp/4.1.104.Final/netty-codec-stomp-4.1.104.Final.jar"
+                        },
+                        {
+                            "name": "netty-codec-stomp",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-stomp/4.1.104.Final/netty-codec-stomp-4.1.104.Final-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "io.netty",
+                    "name": "netty-codec-xml",
+                    "version": "4.1.104.Final",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "netty-codec-xml",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-xml/4.1.104.Final/netty-codec-xml-4.1.104.Final.jar"
+                        },
+                        {
+                            "name": "netty-codec-xml",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-codec-xml/4.1.104.Final/netty-codec-xml-4.1.104.Final-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "io.netty",
+                    "name": "netty-common",
+                    "version": "4.1.107.Final",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "netty-common",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-common/4.1.107.Final/netty-common-4.1.107.Final.jar"
+                        },
+                        {
+                            "name": "netty-common",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-common/4.1.107.Final/netty-common-4.1.107.Final-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "io.netty",
+                    "name": "netty-handler",
+                    "version": "4.1.107.Final",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "netty-handler",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-handler/4.1.107.Final/netty-handler-4.1.107.Final.jar"
+                        },
+                        {
+                            "name": "netty-handler",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-handler/4.1.107.Final/netty-handler-4.1.107.Final-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "io.netty",
+                    "name": "netty-transport-native-unix-common",
+                    "version": "4.1.107.Final",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "netty-transport-native-unix-common",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-native-unix-common/4.1.107.Final/netty-transport-native-unix-common-4.1.107.Final.jar"
+                        },
+                        {
+                            "name": "netty-transport-native-unix-common",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-native-unix-common/4.1.107.Final/netty-transport-native-unix-common-4.1.107.Final-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "io.netty",
+                    "name": "netty-handler-proxy",
+                    "version": "4.1.104.Final",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "netty-handler-proxy",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-handler-proxy/4.1.104.Final/netty-handler-proxy-4.1.104.Final.jar"
+                        },
+                        {
+                            "name": "netty-handler-proxy",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-handler-proxy/4.1.104.Final/netty-handler-proxy-4.1.104.Final-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "io.netty",
+                    "name": "netty-handler-ssl-ocsp",
+                    "version": "4.1.104.Final",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "netty-handler-ssl-ocsp",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-handler-ssl-ocsp/4.1.104.Final/netty-handler-ssl-ocsp-4.1.104.Final.jar"
+                        },
+                        {
+                            "name": "netty-handler-ssl-ocsp",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-handler-ssl-ocsp/4.1.104.Final/netty-handler-ssl-ocsp-4.1.104.Final-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "io.netty",
+                    "name": "netty-resolver",
+                    "version": "4.1.107.Final",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "netty-resolver",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-resolver/4.1.107.Final/netty-resolver-4.1.107.Final.jar"
+                        },
+                        {
+                            "name": "netty-resolver",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-resolver/4.1.107.Final/netty-resolver-4.1.107.Final-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "io.netty",
+                    "name": "netty-resolver-dns",
+                    "version": "4.1.104.Final",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "netty-resolver-dns",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-resolver-dns/4.1.104.Final/netty-resolver-dns-4.1.104.Final.jar"
+                        },
+                        {
+                            "name": "netty-resolver-dns",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-resolver-dns/4.1.104.Final/netty-resolver-dns-4.1.104.Final-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "io.netty",
+                    "name": "netty-transport",
+                    "version": "4.1.107.Final",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "netty-transport",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport/4.1.107.Final/netty-transport-4.1.107.Final.jar"
+                        },
+                        {
+                            "name": "netty-transport",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport/4.1.107.Final/netty-transport-4.1.107.Final-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "io.netty",
+                    "name": "netty-transport-rxtx",
+                    "version": "4.1.104.Final",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "netty-transport-rxtx",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-rxtx/4.1.104.Final/netty-transport-rxtx-4.1.104.Final.jar"
+                        },
+                        {
+                            "name": "netty-transport-rxtx",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-rxtx/4.1.104.Final/netty-transport-rxtx-4.1.104.Final-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "io.netty",
+                    "name": "netty-transport-sctp",
+                    "version": "4.1.104.Final",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "netty-transport-sctp",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-sctp/4.1.104.Final/netty-transport-sctp-4.1.104.Final.jar"
+                        },
+                        {
+                            "name": "netty-transport-sctp",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-sctp/4.1.104.Final/netty-transport-sctp-4.1.104.Final-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "io.netty",
+                    "name": "netty-transport-udt",
+                    "version": "4.1.104.Final",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "netty-transport-udt",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-udt/4.1.104.Final/netty-transport-udt-4.1.104.Final.jar"
+                        },
+                        {
+                            "name": "netty-transport-udt",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-udt/4.1.104.Final/netty-transport-udt-4.1.104.Final-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "io.netty",
+                    "name": "netty-transport-classes-epoll",
+                    "version": "4.1.104.Final",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "netty-transport-classes-epoll",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-classes-epoll/4.1.104.Final/netty-transport-classes-epoll-4.1.104.Final.jar"
+                        },
+                        {
+                            "name": "netty-transport-classes-epoll",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-classes-epoll/4.1.104.Final/netty-transport-classes-epoll-4.1.104.Final-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "io.netty",
+                    "name": "netty-transport-classes-kqueue",
+                    "version": "4.1.104.Final",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "netty-transport-classes-kqueue",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-classes-kqueue/4.1.104.Final/netty-transport-classes-kqueue-4.1.104.Final.jar"
+                        },
+                        {
+                            "name": "netty-transport-classes-kqueue",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-classes-kqueue/4.1.104.Final/netty-transport-classes-kqueue-4.1.104.Final-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "io.netty",
+                    "name": "netty-resolver-dns-classes-macos",
+                    "version": "4.1.104.Final",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "netty-resolver-dns-classes-macos",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-resolver-dns-classes-macos/4.1.104.Final/netty-resolver-dns-classes-macos-4.1.104.Final.jar"
+                        },
+                        {
+                            "name": "netty-resolver-dns-classes-macos",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-resolver-dns-classes-macos/4.1.104.Final/netty-resolver-dns-classes-macos-4.1.104.Final-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "io.projectreactor",
+                    "name": "reactor-core",
+                    "version": "3.6.4",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "reactor-core",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/projectreactor/reactor-core/3.6.4/reactor-core-3.6.4.jar"
+                        },
+                        {
+                            "name": "reactor-core",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/projectreactor/reactor-core/3.6.4/reactor-core-3.6.4-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "io.netty",
+                    "name": "netty-transport-native-epoll",
+                    "version": "4.1.104.Final",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "netty-transport-native-epoll",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-native-epoll/4.1.104.Final/netty-transport-native-epoll-4.1.104.Final.jar"
+                        },
+                        {
+                            "name": "netty-transport-native-epoll",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-native-epoll/4.1.104.Final/netty-transport-native-epoll-4.1.104.Final-sources.jar"
+                        },
+                        {
+                            "name": "netty-transport-native-epoll",
+                            "classifier": "linux-x86_64",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-native-epoll/4.1.104.Final/netty-transport-native-epoll-4.1.104.Final-linux-x86_64.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "io.netty",
+                    "name": "netty-transport-native-kqueue",
+                    "version": "4.1.104.Final",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "netty-transport-native-kqueue",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-native-kqueue/4.1.104.Final/netty-transport-native-kqueue-4.1.104.Final.jar"
+                        },
+                        {
+                            "name": "netty-transport-native-kqueue",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-native-kqueue/4.1.104.Final/netty-transport-native-kqueue-4.1.104.Final-sources.jar"
+                        },
+                        {
+                            "name": "netty-transport-native-kqueue",
+                            "classifier": "osx-x86_64",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/netty-transport-native-kqueue/4.1.104.Final/netty-transport-native-kqueue-4.1.104.Final-osx-x86_64.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "dev.zio",
+                    "name": "zio-schema_3",
+                    "version": "0.4.16",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "zio-schema_3",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-schema_3/0.4.16/zio-schema_3-0.4.16.jar"
+                        },
+                        {
+                            "name": "zio-schema_3",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-schema_3/0.4.16/zio-schema_3-0.4.16-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "dev.zio",
+                    "name": "zio-schema-json_3",
+                    "version": "0.4.16",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "zio-schema-json_3",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-schema-json_3/0.4.16/zio-schema-json_3-0.4.16.jar"
+                        },
+                        {
+                            "name": "zio-schema-json_3",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-schema-json_3/0.4.16/zio-schema-json_3-0.4.16-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "dev.zio",
+                    "name": "zio-schema-protobuf_3",
+                    "version": "0.4.16",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "zio-schema-protobuf_3",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-schema-protobuf_3/0.4.16/zio-schema-protobuf_3-0.4.16.jar"
+                        },
+                        {
+                            "name": "zio-schema-protobuf_3",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-schema-protobuf_3/0.4.16/zio-schema-protobuf_3-0.4.16-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "com.github.luben",
+                    "name": "zstd-jni",
+                    "version": "1.5.5-1",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "zstd-jni",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/github/luben/zstd-jni/1.5.5-1/zstd-jni-1.5.5-1.jar"
+                        },
+                        {
+                            "name": "zstd-jni",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/com/github/luben/zstd-jni/1.5.5-1/zstd-jni-1.5.5-1-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.lz4",
+                    "name": "lz4-java",
+                    "version": "1.8.0",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "lz4-java",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/lz4/lz4-java/1.8.0/lz4-java-1.8.0.jar"
+                        },
+                        {
+                            "name": "lz4-java",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/lz4/lz4-java/1.8.0/lz4-java-1.8.0-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.xerial.snappy",
+                    "name": "snappy-java",
+                    "version": "1.1.10.5",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "snappy-java",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/xerial/snappy/snappy-java/1.1.10.5/snappy-java-1.1.10.5.jar"
+                        },
+                        {
+                            "name": "snappy-java",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/xerial/snappy/snappy-java/1.1.10.5/snappy-java-1.1.10.5-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "ch.qos.logback",
+                    "name": "logback-core",
+                    "version": "1.4.14",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "logback-core",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/ch/qos/logback/logback-core/1.4.14/logback-core-1.4.14.jar"
+                        },
+                        {
+                            "name": "logback-core",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/ch/qos/logback/logback-core/1.4.14/logback-core-1.4.14-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "dev.zio",
+                    "name": "izumi-reflect-thirdparty-boopickle-shaded_3",
+                    "version": "2.3.8",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "izumi-reflect-thirdparty-boopickle-shaded_3",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/izumi-reflect-thirdparty-boopickle-shaded_3/2.3.8/izumi-reflect-thirdparty-boopickle-shaded_3-2.3.8.jar"
+                        },
+                        {
+                            "name": "izumi-reflect-thirdparty-boopickle-shaded_3",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/izumi-reflect-thirdparty-boopickle-shaded_3/2.3.8/izumi-reflect-thirdparty-boopickle-shaded_3-2.3.8-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.reactivestreams",
+                    "name": "reactive-streams",
+                    "version": "1.0.4",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "reactive-streams",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/reactivestreams/reactive-streams/1.0.4/reactive-streams-1.0.4.jar"
+                        },
+                        {
+                            "name": "reactive-streams",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/org/reactivestreams/reactive-streams/1.0.4/reactive-streams-1.0.4-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "dev.zio",
+                    "name": "zio-schema-macros_3",
+                    "version": "0.4.16",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "zio-schema-macros_3",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-schema-macros_3/0.4.16/zio-schema-macros_3-0.4.16.jar"
+                        },
+                        {
+                            "name": "zio-schema-macros_3",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-schema-macros_3/0.4.16/zio-schema-macros_3-0.4.16-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "dev.zio",
+                    "name": "zio-prelude_3",
+                    "version": "1.0.0-RC21",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "zio-prelude_3",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-prelude_3/1.0.0-RC21/zio-prelude_3-1.0.0-RC21.jar"
+                        },
+                        {
+                            "name": "zio-prelude_3",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-prelude_3/1.0.0-RC21/zio-prelude_3-1.0.0-RC21-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "dev.zio",
+                    "name": "zio-constraintless_3",
+                    "version": "0.3.2",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "zio-constraintless_3",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-constraintless_3/0.3.2/zio-constraintless_3-0.3.2.jar"
+                        },
+                        {
+                            "name": "zio-constraintless_3",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-constraintless_3/0.3.2/zio-constraintless_3-0.3.2-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "dev.zio",
+                    "name": "zio-schema-derivation_3",
+                    "version": "0.4.16",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "zio-schema-derivation_3",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-schema-derivation_3/0.4.16/zio-schema-derivation_3-0.4.16.jar"
+                        },
+                        {
+                            "name": "zio-schema-derivation_3",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-schema-derivation_3/0.4.16/zio-schema-derivation_3-0.4.16-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "io.netty.incubator",
+                    "name": "netty-incubator-transport-classes-io_uring",
+                    "version": "0.0.24.Final",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "netty-incubator-transport-classes-io_uring",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/incubator/netty-incubator-transport-classes-io_uring/0.0.24.Final/netty-incubator-transport-classes-io_uring-0.0.24.Final.jar"
+                        },
+                        {
+                            "name": "netty-incubator-transport-classes-io_uring",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/io/netty/incubator/netty-incubator-transport-classes-io_uring/0.0.24.Final/netty-incubator-transport-classes-io_uring-0.0.24.Final-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "dev.zio",
+                    "name": "zio-prelude-macros_3",
+                    "version": "1.0.0-RC21",
+                    "configurations": "default",
+                    "artifacts": [
+                        {
+                            "name": "zio-prelude-macros_3",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-prelude-macros_3/1.0.0-RC21/zio-prelude-macros_3-1.0.0-RC21.jar"
+                        },
+                        {
+                            "name": "zio-prelude-macros_3",
+                            "classifier": "sources",
+                            "path": "/Users/wogul/Library/Caches/Coursier/v1/https/repo1.maven.org/maven2/dev/zio/zio-prelude-macros_3/1.0.0-RC21/zio-prelude-macros_3-1.0.0-RC21-sources.jar"
+                        }
+                    ]
+                }
+            ]
+        },
+        "tags": [
+            "library"
+        ]
+    }
+}

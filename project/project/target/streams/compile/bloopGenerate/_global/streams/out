@@ -1,0 +1,4 @@
+[debug] [connection-manager-build-build] Classpath dependencies List()
+[debug] [connection-manager-build-build] Dependencies from configurations List()
+[debug] Bloop wrote the configuration of project 'connection-manager-build-build' to '/Users/wogul/vsCodeProjects/wayrecall-tracker/services/connection-manager/project/project/.bloop/connection-manager-build-build.json'
+[success] Generated .bloop/connection-manager-build-build.json

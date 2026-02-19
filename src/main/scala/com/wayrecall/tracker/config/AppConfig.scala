@@ -56,14 +56,31 @@ final case class KafkaProducerSettings(
 )
 
 final case class KafkaTopicsConfig(
-    rawGpsEvents: String,
+    gpsEvents: String,
+    gpsEventsRules: String,
+    gpsEventsRetranslation: String,
     deviceStatus: String,
-    unknownDevices: Option[String] = Some("unknown-devices")
+    deviceCommands: String,
+    deviceEvents: String,
+    commandAudit: String,
+    unknownDevices: String,
+    unknownGpsEvents: String
+)
+
+/**
+ * Конфигурация Kafka консьюмера для команд
+ */
+final case class KafkaConsumerSettings(
+    groupId: String,
+    sessionTimeoutMs: Int,
+    autoOffsetReset: String,
+    maxPollRecords: Int
 )
 
 final case class KafkaConfig(
     bootstrapServers: String,
     producer: KafkaProducerSettings,
+    consumer: KafkaConsumerSettings,
     topics: KafkaTopicsConfig
 )
 
@@ -95,14 +112,13 @@ final case class HttpConfig(
 )
 
 /**
- * Конфигурация команд
+ * Конфигурация обработки команд
  */
 final case class CommandsConfig(
-    enabled: Boolean,
     timeoutSeconds: Int,
     maxRetries: Int,
-    redisChannelPattern: String,
-    resultsChannelPrefix: String
+    maxPendingPerDevice: Int = 100,  // Максимум команд в очереди на устройство
+    pendingCommandsTtlHours: Int = 24 // TTL для pending_commands в Redis
 )
 
 /**
@@ -128,6 +144,7 @@ final case class RateLimitConfig(
  * Основная конфигурация приложения
  */
 final case class AppConfig(
+    instanceId: String,        // Уникальный ID инстанса (cm-instance-1, cm-instance-2, ...)
     tcp: TcpConfig,
     http: HttpConfig,
     redis: RedisConfig,
