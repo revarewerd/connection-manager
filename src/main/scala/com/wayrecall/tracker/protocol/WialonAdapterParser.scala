@@ -56,5 +56,5 @@ object WialonAdapterParser extends ProtocolParser:
     WialonParser.imeiAck(accepted)
   
   override def encodeCommand(command: Command): IO[ProtocolError, ByteBuf] =
-    WialonParser.encodeCommand(command)
+    com.wayrecall.tracker.command.WialonEncoder.encode(command)
 

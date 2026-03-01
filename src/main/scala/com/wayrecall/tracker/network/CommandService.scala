@@ -6,13 +6,16 @@ import com.wayrecall.tracker.domain.*
 import com.wayrecall.tracker.storage.{RedisClient, KafkaProducer}
 
 /**
- * Ожидающая выполнения команда с Promise для получения результата
+ * Ожидающая выполнения команда с Promise для получения результата (внутренний тип CommandService)
+ * 
+ * Отличается от domain.PendingCommand: здесь содержится ZIO Promise
+ * для асинхронного ожидания ответа от трекера.
  * 
  * @param command Команда для отправки на трекер
  * @param promise Promise для уведомления о результате
  * @param createdAt Время создания в миллисекундах (для отслеживания таймаутов)
  */
-private[network] final case class PendingCommand(
+private[network] final case class AwaitingCommand(
     command: Command,
     promise: Promise[Throwable, CommandResult],
     createdAt: Long
@@ -63,7 +66,7 @@ object CommandService:
   final case class Live(
       redisClient: RedisClient,
       connectionRegistry: ConnectionRegistry,
-      pendingCommandsRef: Ref[Map[String, PendingCommand]],
+      pendingCommandsRef: Ref[Map[String, AwaitingCommand]],
       commandTimeout: Duration
   ) extends CommandService:
     
@@ -83,7 +86,7 @@ object CommandService:
         // 3. Создать Promise для ожидания ответа
         promise <- Promise.make[Throwable, CommandResult]
         now <- Clock.currentTime(java.util.concurrent.TimeUnit.MILLISECONDS)
-        pendingCmd = PendingCommand(command, promise, now)
+        pendingCmd = AwaitingCommand(command, promise, now)
         _ <- pendingCommandsRef.update(_ + (command.commandId -> pendingCmd))
         
         // 4. Отправить на трекер
@@ -209,6 +212,6 @@ object CommandService:
       for
         redis <- ZIO.service[RedisClient]
         registry <- ZIO.service[ConnectionRegistry]
-        pendingRef <- Ref.make(Map.empty[String, PendingCommand])
+        pendingRef <- Ref.make(Map.empty[String, AwaitingCommand])
       yield Live(redis, registry, pendingRef, 30.seconds)
     }

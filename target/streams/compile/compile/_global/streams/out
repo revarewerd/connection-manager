@@ -1,9 +1,0 @@
-[error] -- [E007] Type Mismatch Error: /Users/wogul/vsCodeProjects/wayrecall-tracker/services/connection-manager/src/main/scala/com/wayrecall/tracker/protocol/WialonBinaryParser.scala:83:24 
-[error] 83 |          return points.toList
-[error]    |                 ^^^^^^^^^^^^^
-[error]    |            Found:    List[com.wayrecall.tracker.domain.GpsRawPoint]
-[error]    |            Required: zio.IO[com.wayrecall.tracker.domain.ProtocolError,
-[error]    |              List[com.wayrecall.tracker.domain.GpsRawPoint]]
-[error]    |
-[error]    | longer explanation available when compiling with `-explain`
-[error] one error found

@@ -187,51 +187,10 @@ object RuptelaParser extends ProtocolParser:
     buf
   
   /**
-   * Кодирование команды для отправки
+   * Кодирование команды — делегирует в RuptelaEncoder
    */
   override def encodeCommand(command: Command): IO[ProtocolError, ByteBuf] =
-    ZIO.attempt {
-      import com.wayrecall.tracker.domain.*
-      
-      val buf = Unpooled.buffer()
-      
-      command match
-        case _: RebootCommand =>
-          // Ruptela: restart command
-          buf.writeShort(2)     // Length
-          buf.writeByte(0x65)   // Command: Set parameter
-          buf.writeByte(0x00)   // Param: restart
-          
-        case SetIntervalCommand(_, _, _, interval) =>
-          // Set interval parameter
-          buf.writeShort(6)
-          buf.writeByte(0x65)   // Command: Set parameter
-          buf.writeByte(0x01)   // Param: interval
-          buf.writeInt(interval)
-          
-        case _: RequestPositionCommand =>
-          // Request current position
-          buf.writeShort(1)
-          buf.writeByte(0x66)   // Command: Get position
-          
-        case SetOutputCommand(_, _, _, idx, enabled) =>
-          buf.writeShort(3)
-          buf.writeByte(0x67)   // Command: Set output
-          buf.writeByte(idx.toByte)
-          buf.writeByte(if enabled then 1 else 0)
-          
-        case CustomCommand(_, _, _, text) =>
-          val bytes = text.getBytes("UTF-8")
-          buf.writeShort(1 + bytes.length)
-          buf.writeByte(0x68)   // Command: Custom
-          buf.writeBytes(bytes)
-      
-      // Add CRC
-      val crc = calculateCrc16(buf, 0, buf.readableBytes())
-      buf.writeShort(crc)
-      
-      buf
-    }.mapError(e => ProtocolError.ParseError(s"Failed to encode Ruptela command: ${e.getMessage}"))
+    com.wayrecall.tracker.command.RuptelaEncoder.encode(command)
   
   /**
    * Вычисление CRC-16

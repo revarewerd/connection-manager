@@ -220,58 +220,10 @@ object NavTelecomParser extends ProtocolParser:
     buf
   
   /**
-   * Кодирование команды
+   * Кодирование команды — делегирует в NavTelecomEncoder
    */
   override def encodeCommand(command: Command): IO[ProtocolError, ByteBuf] =
-    ZIO.attempt {
-      import com.wayrecall.tracker.domain.*
-      
-      val buf = Unpooled.buffer()
-      
-      // Signature
-      buf.writeShort(SIGNATURE)
-      
-      val cmdCode: Byte = command match
-        case _: RebootCommand => 0x01
-        case _: SetIntervalCommand => 0x02
-        case _: RequestPositionCommand => 0x03
-        case _: SetOutputCommand => 0x04
-        case _: CustomCommand => 0x05
-      
-      // Placeholder for length
-      val lengthIdx = buf.writerIndex()
-      buf.writeShortLE(0)
-      
-      // Message ID (command)
-      buf.writeShortLE(0x0300.toShort)
-      
-      // Command code
-      buf.writeByte(cmdCode)
-      
-      // Command-specific data
-      command match
-        case SetIntervalCommand(_, _, _, interval) =>
-          buf.writeIntLE(interval)
-          
-        case SetOutputCommand(_, _, _, idx, enabled) =>
-          buf.writeByte(idx.toByte)
-          buf.writeByte(if enabled then 1 else 0)
-          
-        case CustomCommand(_, _, _, text) =>
-          val bytes = text.getBytes("UTF-8")
-          buf.writeBytes(bytes)
-          
-        case _ => // No additional data
-      
-      // Update length
-      val dataLength = buf.writerIndex() - lengthIdx - 2
-      buf.setShortLE(lengthIdx, dataLength)
-      
-      // CRC
-      buf.writeShortLE(calculateCrc16Ccitt(buf, 2, buf.readableBytes() - 2))
-      
-      buf
-    }.mapError(e => ProtocolError.ParseError(s"Failed to encode NavTelecom command: ${e.getMessage}"))
+    com.wayrecall.tracker.command.NavTelecomEncoder.encode(command)
   
   /**
    * CRC-16-CCITT calculation

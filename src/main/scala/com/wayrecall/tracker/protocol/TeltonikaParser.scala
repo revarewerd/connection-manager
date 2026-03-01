@@ -244,63 +244,11 @@ class TeltonikaParser extends ProtocolParser:
   /**
    * Кодирует команду для отправки на трекер (Codec 12)
    * 
-   * Формат Codec 12:
-   * [Preamble 4B 0x00000000][Data Length 4B][Codec ID 1B = 0x0C]
-   * [Command Quantity 1B][Command Type 1B][Command Size 4B][Command Data]
-   * [Command Quantity 1B][CRC 4B]
+   * Делегирует в TeltonikaEncoder (command/ пакет).
+   * Форматы: cpureset, setparam, getrecord, setdigout, custom.
    */
   override def encodeCommand(command: Command): IO[ProtocolError, ByteBuf] =
-    ZIO.attempt {
-      import com.wayrecall.tracker.domain.*
-      
-      val commandText = command match
-        case _: RebootCommand => "restart"
-        case SetIntervalCommand(_, _, _, interval) => s"setparam 1001:$interval"
-        case _: RequestPositionCommand => "getrecord"
-        case SetOutputCommand(_, _, _, idx, enabled) => s"setdigout ${if enabled then 1 else 0}"
-        case CustomCommand(_, _, _, text) => text
-      
-      val commandBytes = commandText.getBytes(StandardCharsets.UTF_8)
-      
-      // Размер данных: codec(1) + qty(1) + type(1) + size(4) + data + qty(1)
-      val dataLength = 1 + 1 + 1 + 4 + commandBytes.length + 1
-      
-      val buffer = Unpooled.buffer(4 + 4 + dataLength + 4) // preamble + length + data + crc
-      
-      // Preamble (4 bytes of zeros)
-      buffer.writeInt(0)
-      
-      // Data length
-      buffer.writeInt(dataLength)
-      
-      // Codec ID = 0x0C (Codec 12)
-      buffer.writeByte(0x0C)
-      
-      // Command quantity
-      buffer.writeByte(1)
-      
-      // Command type (0x05 = command)
-      buffer.writeByte(0x05)
-      
-      // Command size
-      buffer.writeInt(commandBytes.length)
-      
-      // Command data
-      buffer.writeBytes(commandBytes)
-      
-      // Command quantity (again)
-      buffer.writeByte(1)
-      
-      // Calculate CRC for data portion (from codec to second quantity)
-      val dataForCrc = new Array[Byte](dataLength)
-      buffer.getBytes(8, dataForCrc) // skip preamble and length
-      val crc = calculateCrc16(dataForCrc)
-      
-      // CRC
-      buffer.writeInt(crc)
-      
-      buffer
-    }.mapError(e => ProtocolError.ParseError(s"Failed to encode Teltonika command: ${e.getMessage}"))
+    com.wayrecall.tracker.command.TeltonikaEncoder.encode(command)
   
   /**
    * Вычисляет CRC-16-IBM (polynomial 0xA001)

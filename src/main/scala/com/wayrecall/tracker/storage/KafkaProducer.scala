@@ -4,7 +4,7 @@ import zio.*
 import zio.json.*
 import org.apache.kafka.clients.producer.{KafkaProducer => JavaKafkaProducer, ProducerConfig, ProducerRecord, RecordMetadata, Callback}
 import org.apache.kafka.common.serialization.StringSerializer
-import com.wayrecall.tracker.domain.{GpsPoint, GpsEventMessage, DeviceStatus, UnknownDeviceEvent, UnknownGpsPoint, KafkaError}
+import com.wayrecall.tracker.domain.{GpsPoint, GpsEventMessage, DeviceStatus, UnknownDeviceEvent, UnknownGpsPoint, GpsParseErrorEvent, KafkaError}
 import com.wayrecall.tracker.config.KafkaConfig
 import java.util.Properties
 
@@ -25,6 +25,7 @@ trait KafkaProducer:
   def publishDeviceStatus(status: DeviceStatus): IO[KafkaError, Unit]
   def publishUnknownDevice(event: UnknownDeviceEvent): IO[KafkaError, Unit]
   def publishUnknownGpsEvent(point: UnknownGpsPoint): IO[KafkaError, Unit]
+  def publishParseError(event: GpsParseErrorEvent): IO[KafkaError, Unit]
 
 object KafkaProducer:
   
@@ -52,6 +53,9 @@ object KafkaProducer:
   
   def publishUnknownGpsEvent(point: UnknownGpsPoint): ZIO[KafkaProducer, KafkaError, Unit] =
     ZIO.serviceWithZIO(_.publishUnknownGpsEvent(point))
+  
+  def publishParseError(event: GpsParseErrorEvent): ZIO[KafkaProducer, KafkaError, Unit] =
+    ZIO.serviceWithZIO(_.publishParseError(event))
   
   /**
    * Live реализация с Java Kafka Producer
@@ -92,6 +96,9 @@ object KafkaProducer:
     
     override def publishUnknownGpsEvent(point: UnknownGpsPoint): IO[KafkaError, Unit] =
       serializeAndPublish(point, config.topics.unknownGpsEvents, point.imei)
+    
+    override def publishParseError(event: GpsParseErrorEvent): IO[KafkaError, Unit] =
+      serializeAndPublish(event, config.topics.gpsParseErrors, event.imei)
     
     /**
      * Сериализует объект в JSON и публикует - чисто функциональный подход

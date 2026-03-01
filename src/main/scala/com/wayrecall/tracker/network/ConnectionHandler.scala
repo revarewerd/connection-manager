@@ -5,7 +5,8 @@ import zio.stream.*
 import io.netty.buffer.ByteBuf
 import io.netty.channel.{ChannelHandlerContext, ChannelInboundHandlerAdapter}
 import com.wayrecall.tracker.domain.*
-import com.wayrecall.tracker.protocol.ProtocolParser
+import com.wayrecall.tracker.config.AppConfig
+import com.wayrecall.tracker.protocol.{ProtocolParser, MultiProtocolParser}
 import com.wayrecall.tracker.storage.{RedisClient, KafkaProducer}
 import com.wayrecall.tracker.filter.{DeadReckoningFilter, StationaryFilter}
 import java.net.InetSocketAddress
@@ -14,53 +15,81 @@ import java.time.Instant
 /**
  * Состояние соединения — immutable (неизменяемый объект)
  * 
- * Хранит информацию о текущем TCP-соединении:
+ * Хранит ВСЮ информацию о TCP-соединении в памяти:
  * - IMEI устройства (после аутентификации)
  * - VehicleId из базы данных
- * - DeviceData из Redis HASH device:{imei} (контекст + позиция + connection)
+ * - DeviceData — кэш контекста с TTL (НЕ ходим в Redis на каждый пакет!)
+ * - Определённый протокол (MultiProtocolParser кэширует результат)
+ * - Последняя позиция (in-memory, без Redis HMSET)
  * - Время подключения (для расчёта длительности сессии)
- * - Кэш последних позиций (для фильтрации)
  *
- * DeviceData заменяет VehicleConfig — теперь храним ВСЕ данные
- * из единого Redis HASH, а не только маршрутизационные флаги.
+ * КРИТИЧНО: DeviceData кэшируется при подключении на contextCacheTtlMs (1 час).
+ * Инвалидация происходит через Redis Pub/Sub (device-config-changed).
+ * Результат: 864M HGETALL/день → ~10K/день (86,400x сокращение).
  * 
  * @param imei IMEI устройства (None до аутентификации)
  * @param vehicleId ID транспортного средства в системе
  * @param connectedAt Unix timestamp подключения в миллисекундах
- * @param positionCache Кэш последних позиций по vehicleId для фильтрации
- * @param deviceData Полные данные устройства из Redis HASH device:{imei}
+ * @param lastPosition Последняя обработанная позиция (in-memory, заменяет Redis HMSET)
+ * @param isUnknownDevice Трекер не зарегистрирован, но мы принимаем данные
+ * @param deviceData Кэш данных устройства из Redis HASH device:{imei}
+ * @param detectedProtocol Определённый протокол (кэшируется после первого пакета)
+ * @param contextCachedAt Время кэширования контекста (для TTL проверки)
+ * @param contextCacheTtlMs TTL кэша контекста в миллисекундах (по умолчанию 1 час)
  */
 final case class ConnectionState(
     imei: Option[String] = None,
     vehicleId: Option[Long] = None,
     connectedAt: Long = 0L,
-    positionCache: Map[Long, GpsPoint] = Map.empty,
-    isUnknownDevice: Boolean = false,   // Трекер не зарегистрирован, но мы принимаем данные
-    deviceData: Option[DeviceData] = None  // Все данные устройства из Redis HASH device:{imei}
+    lastPosition: Option[GpsPoint] = None,
+    isUnknownDevice: Boolean = false,
+    deviceData: Option[DeviceData] = None,
+    detectedProtocol: Option[Protocol] = None,
+    contextCachedAt: Long = 0L,
+    contextCacheTtlMs: Long = 3_600_000L   // 1 час по умолчанию
 ):
   /** Устанавливает IMEI и vehicleId после успешной аутентификации */
   def withImei(newImei: String, vid: Long, timestamp: Long): ConnectionState =
     copy(imei = Some(newImei), vehicleId = Some(vid), connectedAt = timestamp)
   
-  /** Устанавливает IMEI, vehicleId + полные данные из Redis HASH */
+  /** Устанавливает IMEI, vehicleId + полные данные из Redis HASH + кэш */
   def withImeiAndDeviceData(newImei: String, vid: Long, timestamp: Long, data: DeviceData): ConnectionState =
-    copy(imei = Some(newImei), vehicleId = Some(vid), connectedAt = timestamp, deviceData = Some(data))
+    copy(
+      imei = Some(newImei),
+      vehicleId = Some(vid),
+      connectedAt = timestamp,
+      deviceData = Some(data),
+      contextCachedAt = timestamp,
+      lastPosition = data.previousPosition
+    )
   
   /** Устанавливает IMEI для незарегистрированного трекера (без vehicleId) */
   def withUnknownImei(newImei: String, timestamp: Long): ConnectionState =
     copy(imei = Some(newImei), vehicleId = None, connectedAt = timestamp, isUnknownDevice = true)
   
-  /** Обновляет DeviceData (при получении device-events или fresh HGETALL) */
-  def withUpdatedDeviceData(data: DeviceData): ConnectionState =
-    copy(deviceData = Some(data))
+  /** Обновляет DeviceData (при получении device-events или invalidation) */
+  def withUpdatedDeviceData(data: DeviceData, now: Long): ConnectionState =
+    copy(deviceData = Some(data), contextCachedAt = now)
   
-  /** Обновляет последнюю известную позицию для vehicleId */
-  def updatePosition(vid: Long, point: GpsPoint): ConnectionState =
-    copy(positionCache = positionCache.updated(vid, point))
+  /** Инвалидирует кэш контекста (по Pub/Sub уведомлению) */
+  def invalidateContext: ConnectionState =
+    copy(contextCachedAt = 0L)
   
-  /** Получает последнюю известную позицию для vehicleId (для Dead Reckoning фильтра) */
-  def getPosition(vid: Long): Option[GpsPoint] =
-    positionCache.get(vid)
+  /** Обновляет последнюю позицию (in-memory, без Redis HMSET!) */
+  def withLastPosition(point: GpsPoint): ConnectionState =
+    copy(lastPosition = Some(point))
+  
+  /** Устанавливает определённый протокол (кэш MultiProtocolParser) */
+  def withDetectedProtocol(protocol: Protocol): ConnectionState =
+    copy(detectedProtocol = Some(protocol))
+  
+  /** Проверяет, истёк ли TTL кэша контекста */
+  def isContextExpired(now: Long): Boolean =
+    contextCachedAt == 0L || (now - contextCachedAt) > contextCacheTtlMs
+  
+  /** Получает предыдущую позицию для фильтрации (in-memory кэш) */
+  def getPreviousPosition: Option[GpsPoint] =
+    lastPosition
 
 /**
  * Сервис обработки GPS данных - чисто функциональный
@@ -70,44 +99,37 @@ final case class ConnectionState(
  * 2. Парсинг GPS-пакетов
  * 3. Фильтрацию аномальных точек (Dead Reckoning)
  * 4. Фильтрацию стоянок (Stationary Filter)
- * 5. Сохранение позиций в Redis
- * 6. Публикацию событий в Kafka
- * 7. Отслеживание статуса подключения/отключения
+ * 5. Публикацию событий в Kafka
+ * 6. Отслеживание статуса подключения/отключения
+ * 
+ * ИЗМЕНЕНИЕ v3.0: parser передаётся как параметр в методы,
+ * а не хранится как поле. Каждый ConnectionHandler имеет свой parser,
+ * соответствующий протоколу TCP-порта.
  */
 trait GpsProcessingService:
   /**
    * Обрабатывает первый пакет с IMEI
    * 
-   * Алгоритм:
-   * 1. Парсим IMEI из бинарного пакета
-   * 2. Ищем vehicleId в Redis по ключу vehicle:{imei}
-   * 3. Если не найден - устройство неизвестно
-   * 4. Получаем предыдущую позицию из Redis (для фильтра)
-   * 
    * @param buffer Netty ByteBuf с сырыми данными
    * @param remoteAddress IP адрес трекера
-   * @param protocolName Название протокола (teltonika, wialon и т.д.)
-   * @return Кортеж (IMEI, vehicleId, предыдущая позиция)
+   * @param parser Парсер конкретного протокола (определяется TCP-портом)
+   * @return Кортеж (IMEI, vehicleId, предыдущая позиция, DeviceData)
    */
   def processImeiPacket(
     buffer: ByteBuf,
     remoteAddress: InetSocketAddress,
-    protocolName: String
+    parser: ProtocolParser
   ): IO[ProtocolError, (String, Long, Option[GpsPoint], Option[DeviceData])]
   
   /**
    * Обрабатывает пакет с GPS данными
    * 
-   * Алгоритм:
-   * 1. Парсим сырые точки из бинарного пакета
-   * 2. Для каждой точки применяем фильтры
-   * 3. Сохраняем в Redis (для фронтенда)
-   * 4. Публикуем в Kafka (для аналитики)
-   * 
    * @param buffer Netty ByteBuf с сырыми данными
    * @param imei IMEI устройства
    * @param vehicleId ID транспортного средства
    * @param prevPosition Предыдущая позиция (для фильтрации)
+   * @param parser Парсер конкретного протокола
+   * @param deviceData Кэшированные данные устройства из ConnectionState
    * @return Кортеж (валидные точки, общее количество точек)
    */
   def processDataPacket(
@@ -115,76 +137,71 @@ trait GpsProcessingService:
     imei: String,
     vehicleId: Long,
     prevPosition: Option[GpsPoint],
+    parser: ProtocolParser,
     deviceData: Option[DeviceData] = None
   ): IO[Throwable, (List[GpsPoint], Int)]
   
   /**
    * Вызывается при успешном подключении устройства
-   * 
-   * Действия:
-   * 1. Регистрирует соединение в Redis (для мониторинга)
-   * 2. Публикует событие DeviceStatus(isOnline=true) в Kafka
    */
-  def onConnect(imei: String, vehicleId: Long, remoteAddress: InetSocketAddress): UIO[Unit]
+  def onConnect(imei: String, vehicleId: Long, remoteAddress: InetSocketAddress, protocolName: String): UIO[Unit]
   
   /**
    * Вызывается при отключении устройства
-   * 
-   * Действия:
-   * 1. Удаляет соединение из Redis
-   * 2. Публикует событие DeviceStatus(isOnline=false) в Kafka с причиной отключения
    */
   def onDisconnect(imei: String, vehicleId: Long, reason: DisconnectReason, connectedAt: Long): UIO[Unit]
   
   /**
    * Вызывается при подключении неизвестного устройства
-   * 
-   * Публикует событие UnknownDeviceEvent в Kafka топик unknown-devices
-   * Полезно для:
-   * - Автоматического provisioning новых устройств
-   * - Мониторинга попыток подключения
-   * - Безопасности (обнаружение подозрительных IMEI)
    */
   def onUnknownDevice(imei: String, protocolName: String, remoteAddress: InetSocketAddress): UIO[Unit]
   
   /**
    * Обрабатывает GPS пакет от незарегистрированного трекера
-   * 
-   * Парсит точки и публикует в Kafka топик unknown-gps-events.
-   * History Writer сохраняет их в отдельную таблицу unknown_device_positions.
-   * Device Manager показывает в вебе для ручной регистрации.
    */
   def processUnknownDataPacket(
     buffer: ByteBuf,
     imei: String,
-    protocolName: String,
+    parser: ProtocolParser,
     instanceId: String
   ): IO[Throwable, Int]
+
+  /**
+   * Обновляет контекст устройства из Redis (при истечении TTL кэша)
+   * 
+   * Выполняет HGETALL device:{imei} и возвращает свежие DeviceData.
+   * Вызывается ~1 раз в час для каждого активного соединения.
+   */
+  def refreshDeviceContext(imei: String): IO[Throwable, Option[DeviceData]]
 
 object GpsProcessingService:
   
   /**
    * Live реализация сервиса обработки GPS
    * 
+   * ИЗМЕНЕНИЕ v3.0: parser убран из полей — передаётся как параметр.
+   * GpsProcessingService теперь протоколо-независим.
+   * Конкретный parser определяется ConnectionHandler'ом (= TCP-портом).
+   * 
    * Зависимости:
-   * - parser: ProtocolParser - парсер протокола (Teltonika, Wialon и т.д.)
-   * - redisClient: RedisClient - клиент Redis для кэширования
+   * - redisClient: RedisClient - клиент Redis для аутентификации и кэширования
    * - kafkaProducer: KafkaProducer - продюсер для публикации событий
    * - deadReckoningFilter: DeadReckoningFilter - фильтр аномальных точек
    * - stationaryFilter: StationaryFilter - фильтр стоянок
+   * - instanceId: String - идентификатор этого CM инстанса
    */
   final case class Live(
-      parser: ProtocolParser,
       redisClient: RedisClient,
       kafkaProducer: KafkaProducer,
       deadReckoningFilter: DeadReckoningFilter,
-      stationaryFilter: StationaryFilter
+      stationaryFilter: StationaryFilter,
+      instanceId: String
   ) extends GpsProcessingService:
     
     override def processImeiPacket(
       buffer: ByteBuf,
       remoteAddress: InetSocketAddress,
-      protocolName: String
+      parser: ProtocolParser
     ): IO[ProtocolError, (String, Long, Option[GpsPoint], Option[DeviceData])] =
       for
         // Шаг 1: Парсим IMEI из бинарного пакета (протокол-специфичная логика)
@@ -218,46 +235,147 @@ object GpsProcessingService:
       imei: String,
       vehicleId: Long,
       prevPosition: Option[GpsPoint],
+      parser: ProtocolParser,
       deviceData: Option[DeviceData] = None
     ): IO[Throwable, (List[GpsPoint], Int)] =
       for
         // Шаг 1: Парсим сырые точки из бинарного пакета (протокол-специфичный парсинг)
-        rawPoints <- parser.parseData(buffer, imei)
-                       .tapError(e => ZIO.logError(s"[DATA] Ошибка парсинга пакета: ${e.message}"))
-                       .mapError(e => new Exception(e.message))
-        _ <- ZIO.logDebug(s"[DATA] IMEI=$imei: распарсено ${rawPoints.size} сырых точек")
+        // При ошибке парсинга — публикуем в gps-parse-errors и возвращаем пустой результат
+        rawPointsOpt <- parser.parseData(buffer, imei)
+                          .tapError(e => ZIO.logError(s"[DATA] Ошибка парсинга пакета: ${e.message}"))
+                          .foldZIO(
+                            error => publishParseError(imei, parser.protocolName, error, buffer)
+                              .as(None),
+                            points => ZIO.succeed(Some(points))
+                          )
+        rawPoints = rawPointsOpt.getOrElse(List.empty)
+        _ <- ZIO.when(rawPoints.nonEmpty)(
+               ZIO.logDebug(s"[DATA] IMEI=$imei: распарсено ${rawPoints.size} сырых точек")
+             )
         
-        // Шаг 2: HGETALL device:{imei} — СВЕЖИЙ контекст на КАЖДЫЙ data-пакет!
-        // Это критически важно: Device Manager мог обновить флаги (hasGeozones, hasRetranslation)
-        // между пакетами, и мы должны маршрутизировать по актуальным данным.
-        // Стоимость: ~0.1мс на HGETALL — пренебрежимо мала по сравнению с Kafka publish.
-        freshData <- redisClient.getDeviceData(imei)
-                       .tapError(e => ZIO.logWarning(s"[DATA] Ошибка HGETALL device:$imei: ${e.message}"))
-                       .catchAll(_ => ZIO.succeed(None))
-        // Используем свежие данные или fallback на кэш из ConnectionState
-        actualData = freshData.orElse(deviceData)
-        _ <- ZIO.logDebug(s"[DATA] IMEI=$imei: freshData=${freshData.isDefined}, " +
+        // Шаг 2: Используем контекст из in-memory кэша (ConnectionState.deviceData)
+        // НЕ делаем HGETALL на каждый пакет! Кэш обновляется:
+        // - При подключении (1 раз)
+        // - По TTL (раз в час)
+        // - По Redis Pub/Sub (device-config-changed)
+        actualData = deviceData
+        _ <- ZIO.logDebug(s"[DATA] IMEI=$imei: контекст из in-memory кэша, " +
           s"routing: geozones=${actualData.map(_.hasGeozones)}, retrans=${actualData.map(_.hasRetranslation)}")
         
-        // Шаг 3: Определяем предыдущую позицию — кэш > свежие данные из Redis
-        // Кэш в ConnectionState точнее (обновляется после каждой точки),
-        // но если кэш пуст (первый пакет после реконнекта) — берём из Redis HASH
-        actualPrev = prevPosition.orElse(freshData.flatMap(_.previousPosition))
+        // Шаг 3: Предыдущая позиция из in-memory кэша (НЕ из Redis!)
+        actualPrev = prevPosition
         
         // Шаг 4: Обрабатываем каждую точку через фильтры (fold для цепочки prev → next)
+        // ВСЕ точки публикуются в gps-events (даже отфильтрованные),
+        // только valid+moving → gps-events-rules / gps-events-retranslation
         result <- ZIO.foldLeft(rawPoints)((List.empty[GpsPoint], actualPrev)) { 
           case ((processed, prev), raw) =>
-            processPoint(raw, vehicleId, prev, actualData, imei).map { point =>
+            processPoint(raw, vehicleId, prev, actualData, imei, parser.protocolName).map { point =>
               (processed :+ point, Some(point))
             }.catchAll { error =>
-              // Точка отфильтрована — это НОРМАЛЬНО, не ошибка (Dead Reckoning / Stationary)
+              // Точка отфильтрована (Dead Reckoning) — публикуем в gps-events с isValid=false
               ZIO.logDebug(s"[FILTER] IMEI=$imei: точка отфильтрована - ${error.getMessage}") *>
-              ZIO.succeed((processed, prev))
+              publishFilteredPoint(raw, vehicleId, imei, parser.protocolName, actualData).as((processed, prev))
             }
         }
         (validPoints, _) = result
         _ <- ZIO.logDebug(s"[DATA] IMEI=$imei: после фильтрации ${validPoints.size}/${rawPoints.size} точек")
       yield (validPoints, rawPoints.size)
+    
+    /**
+     * Публикует отфильтрованную точку в gps-events с isValid=false
+     * 
+     * TimescaleDB получает ВСЕ точки: валидные и отфильтрованные.
+     * History Writer использует isValid для маркировки, а не для фильтрации.
+     */
+    private def publishFilteredPoint(
+      raw: GpsRawPoint,
+      vehicleId: Long,
+      imei: String,
+      protocolName: String,
+      deviceData: Option[DeviceData]
+    ): UIO[Unit] =
+      val effect = for
+        now <- Clock.instant
+        dd = deviceData
+        msg = GpsEventMessage(
+          vehicleId = vehicleId,
+          organizationId = dd.map(_.organizationId).getOrElse(0L),
+          imei = imei,
+          latitude = raw.latitude,
+          longitude = raw.longitude,
+          altitude = raw.altitude,
+          speed = raw.speed,
+          course = raw.angle,
+          satellites = raw.satellites,
+          deviceTime = raw.timestamp,
+          serverTime = now.toEpochMilli,
+          hasGeozones = dd.exists(_.hasGeozones),
+          hasSpeedRules = dd.exists(_.hasSpeedRules),
+          hasRetranslation = dd.exists(_.hasRetranslation),
+          retranslationTargets = dd.flatMap(d => if d.retranslationTargets.isEmpty then None else Some(d.retranslationTargets)),
+          isMoving = false,
+          isValid = false,  // Точка отфильтрована Dead Reckoning
+          protocol = protocolName
+        )
+        _ <- kafkaProducer.publishGpsEventMessage(msg)
+               .tapError(e => ZIO.logError(s"[KAFKA] Ошибка публикации отфильтрованной точки: ${e.message}"))
+      yield ()
+      effect.ignore
+    
+    /**
+     * Публикует ошибку парсинга в gps-parse-errors
+     * 
+     * Используется когда parser.parseData не может обработать пакет.
+     * Сохраняет hex-дамп первых 512 байт для отладки.
+     */
+    private def publishParseError(
+      imei: String,
+      protocolName: String,
+      error: ProtocolError,
+      buffer: ByteBuf
+    ): UIO[Unit] =
+      val effect = for
+        now <- Clock.currentTime(java.util.concurrent.TimeUnit.MILLISECONDS)
+        
+        // Hex-дамп первых 512 байт пакета для диагностики
+        hexDump = ZIO.attempt {
+          val readable = math.min(buffer.readableBytes(), 512)
+          if readable > 0 then
+            val bytes = new Array[Byte](readable)
+            buffer.getBytes(buffer.readerIndex(), bytes)
+            Some(bytes.map(b => f"${b & 0xFF}%02X").mkString(" "))
+          else None
+        }.orElse(ZIO.succeed(None))
+        hex <- hexDump
+        
+        // Определяем тип ошибки из ProtocolError ADT
+        errorType = error match
+          case _: ProtocolError.InsufficientData       => "InsufficientData"
+          case _: ProtocolError.InvalidChecksum        => "InvalidChecksum"
+          case _: ProtocolError.InvalidCodec           => "InvalidCodec"
+          case _: ProtocolError.InvalidImei            => "InvalidImei"
+          case _: ProtocolError.ParseError             => "ParseError"
+          case _: ProtocolError.UnknownDevice          => "UnknownDevice"
+          case _: ProtocolError.UnsupportedProtocol    => "UnsupportedProtocol"
+          case _: ProtocolError.ProtocolDetectionFailed => "ProtocolDetectionFailed"
+          case _                                       => "GenericError"
+        
+        event = GpsParseErrorEvent(
+          imei = imei,
+          protocol = protocolName,
+          errorType = errorType,
+          errorMessage = error.message,
+          rawPacketHex = hex,
+          rawPacketSize = buffer.readableBytes(),
+          remoteAddress = "",  // TODO: передать из ConnectionHandler
+          instanceId = instanceId,
+          timestamp = now
+        )
+        _ <- kafkaProducer.publishParseError(event)
+               .tapError(e => ZIO.logError(s"[KAFKA] Ошибка публикации parse error: ${e.message}"))
+      yield ()
+      effect.ignore
     
     /**
      * Обрабатывает одну GPS точку через все фильтры и обогащает контекстом
@@ -266,28 +384,24 @@ object GpsProcessingService:
      * 1. Dead Reckoning Filter — отсеивает точки с нереальной скоростью/позицией
      * 2. Преобразование GpsRawPoint → GpsPoint с vehicleId
      * 3. Stationary Filter — определяет движение/стоянку
-     * 4. HMSET device:{imei} — обновляем position поля в едином Redis HASH
-     * 5. Legacy: SETEX position:{vehicleId} — обратная совместимость
-     * 6. Публикация в Kafka gps-events (только при движении)
-     * 7. Обогащение GpsEventMessage из DeviceData (organizationId, speedLimit, флаги)
-     * 8. Условная маршрутизация в gps-events-rules / gps-events-retranslation
+     * 4. ВСЕГДА публикуем в Kafka gps-events (ВСЕ точки, включая стоянки — для TimescaleDB)
+     * 5. Обогащение GpsEventMessage из DeviceData (organizationId, speedLimit, флаги)
+     * 6. Условная маршрутизация: ТОЛЬКО valid+moving → gps-events-rules / gps-events-retranslation
      *
-     * @param raw Сырая точка из протокола
-     * @param vehicleId ID транспортного средства
-     * @param prev Предыдущая позиция (для фильтрации)
-     * @param deviceData Контекст устройства из Redis HASH (для обогащения + маршрутизации)
-     * @param imei IMEI устройства (для ключа Redis и Kafka)
+     * ИЗМЕНЕНИЕ v4.0: gps-events получает ВСЕ точки (isMoving=true/false).
+     * TimescaleDB нужна полная история для аналитики и отчётов.
+     * Правила и ретрансляция получают только движущиеся точки.
      */
     private def processPoint(
       raw: GpsRawPoint,
       vehicleId: Long,
       prev: Option[GpsPoint],
       deviceData: Option[DeviceData],
-      imei: String
+      imei: String,
+      protocolName: String
     ): IO[Throwable, GpsPoint] =
       for
         // Шаг 1: Dead Reckoning — проверяем скорость перехода между prev и raw
-        // Если точка "телепортировалась" на невозможное расстояние — отклоняем
         _ <- deadReckoningFilter.validateWithPrev(raw, prev)
                .tapError(e => ZIO.logDebug(s"[FILTER] Dead Reckoning отклонил точку: ${e.message}"))
                .mapError(e => new Exception(e.message))
@@ -296,78 +410,66 @@ object GpsProcessingService:
         point = raw.toValidated(vehicleId)
         
         // Шаг 3: Stationary Filter — определяем движение или стоянку
-        // shouldPublish = true только если ТС движется (скорость >= порога или расстояние >= порога)
-        shouldPublish <- stationaryFilter.shouldPublish(point, prev)
-        _ <- ZIO.logDebug(s"[FILTER] vehicleId=$vehicleId: shouldPublish=$shouldPublish (lat=${point.latitude}, lon=${point.longitude})")
+        isMoving <- stationaryFilter.shouldPublish(point, prev)
+        _ <- ZIO.logDebug(s"[FILTER] vehicleId=$vehicleId: isMoving=$isMoving")
         
         // Шаг 4: Получаем текущий момент времени
         now <- Clock.instant
         
-        // Шаг 5: HMSET device:{imei} — обновляем position поля в едином Redis HASH
-        // Это позволяет другим сервисам (WebSocket, API) получить позицию из того же ключа
-        _ <- redisClient.updateDevicePosition(imei, DeviceData.positionToHash(point, shouldPublish, now))
-               .tapError(e => ZIO.logError(s"[REDIS] Ошибка HMSET позиции device:$imei: ${e.message}"))
+        // Шаг 5: Обогащённое сообщение GpsEventMessage с контекстом из DeviceData (in-memory)
+        dd = deviceData
+        msg = GpsEventMessage(
+          vehicleId = vehicleId,
+          organizationId = dd.map(_.organizationId).getOrElse(0L),
+          imei = imei,
+          latitude = point.latitude,
+          longitude = point.longitude,
+          altitude = point.altitude,
+          speed = point.speed,
+          course = point.angle,
+          satellites = point.satellites,
+          deviceTime = point.timestamp,
+          serverTime = now.toEpochMilli,
+          hasGeozones = dd.exists(_.hasGeozones),
+          hasSpeedRules = dd.exists(_.hasSpeedRules),
+          hasRetranslation = dd.exists(_.hasRetranslation),
+          retranslationTargets = dd.flatMap(d => if d.retranslationTargets.isEmpty then None else Some(d.retranslationTargets)),
+          isMoving = isMoving,
+          isValid = true,
+          protocol = protocolName
+        )
+        
+        // Шаг 6: ВСЕГДА публикуем в gps-events (ВСЕ точки — для TimescaleDB)
+        _ <- kafkaProducer.publishGpsEventMessage(msg)
+               .tap(_ => ZIO.logDebug(s"[KAFKA] Точка → gps-events vehicleId=$vehicleId isMoving=$isMoving"))
+               .tapError(e => ZIO.logError(s"[KAFKA] Ошибка публикации: ${e.message}"))
                .mapError(e => new Exception(e.message))
         
-        // Шаг 6: Legacy — SETEX position:{vehicleId} (обратная совместимость)
-        // TODO: убрать после миграции всех потребителей на device:{imei}
-        _ <- redisClient.setPosition(point)
-               .tapError(e => ZIO.logError(s"[REDIS] Ошибка legacy setPosition: ${e.message}"))
-               .mapError(e => new Exception(e.message))
-        
-        // Шаг 7: Публикация в Kafka gps-events (только при движении)
-        _ <- ZIO.when(shouldPublish)(
-               kafkaProducer.publishGpsEvent(point)
-                 .tap(_ => ZIO.logDebug(s"[KAFKA] Точка → gps-events vehicleId=$vehicleId"))
-                 .tapError(e => ZIO.logError(s"[KAFKA] Ошибка публикации: ${e.message}"))
-                 .mapError(e => new Exception(e.message))
-             )
-        
-        // Шаг 8: Обогащённое сообщение GpsEventMessage с контекстом из DeviceData
-        // DeviceData содержит organizationId, speedLimit, флаги маршрутизации —
-        // всё что нужно downstream-сервисам чтобы НЕ ходить в БД самостоятельно
-        _ <- deviceData match
-          case Some(dd) if shouldPublish =>
-            val msg = GpsEventMessage(
-              vehicleId = vehicleId,
-              organizationId = dd.organizationId,
-              imei = imei,
-              latitude = point.latitude,
-              longitude = point.longitude,
-              altitude = point.altitude,
-              speed = point.speed,
-              course = point.angle,
-              satellites = point.satellites,
-              deviceTime = point.timestamp,
-              serverTime = now.toEpochMilli,
-              hasGeozones = dd.hasGeozones,
-              hasSpeedRules = dd.hasSpeedRules,
-              hasRetranslation = dd.hasRetranslation,
-              retranslationTargets = if dd.retranslationTargets.isEmpty then None else Some(dd.retranslationTargets),
-              isMoving = shouldPublish,
-              isValid = true,
-              protocol = parser.protocolName
-            )
-            for
-              // Публикация в gps-events-rules (геозоны + правила скорости)
-              _ <- ZIO.when(dd.needsRulesCheck)(
-                kafkaProducer.publishGpsRulesEvent(msg)
-                  .tap(_ => ZIO.logDebug(s"[KAFKA] Точка → gps-events-rules vehicleId=$vehicleId"))
-                  .tapError(e => ZIO.logError(s"[KAFKA] Ошибка rules: ${e.message}"))
-                  .mapError(e => new Exception(e.message))
-              )
-              // Публикация в gps-events-retranslation (пересылка в внешние системы)
-              _ <- ZIO.when(dd.hasRetranslation)(
-                kafkaProducer.publishGpsRetranslationEvent(msg)
-                  .tap(_ => ZIO.logDebug(s"[KAFKA] Точка → gps-events-retranslation vehicleId=$vehicleId"))
-                  .tapError(e => ZIO.logError(s"[KAFKA] Ошибка retranslation: ${e.message}"))
-                  .mapError(e => new Exception(e.message))
-              )
-            yield ()
-          case _ => ZIO.unit
+        // Шаг 7: Маршрутизация в rules и retranslation — ТОЛЬКО движущиеся точки
+        _ <- ZIO.when(isMoving)(
+          dd match
+            case Some(d) =>
+              for
+                // Публикация в gps-events-rules (геозоны + правила скорости)
+                _ <- ZIO.when(d.needsRulesCheck)(
+                  kafkaProducer.publishGpsRulesEvent(msg)
+                    .tap(_ => ZIO.logDebug(s"[KAFKA] Точка → gps-events-rules vehicleId=$vehicleId"))
+                    .tapError(e => ZIO.logError(s"[KAFKA] Ошибка rules: ${e.message}"))
+                    .mapError(e => new Exception(e.message))
+                )
+                // Публикация в gps-events-retranslation (пересылка в внешние системы)
+                _ <- ZIO.when(d.hasRetranslation)(
+                  kafkaProducer.publishGpsRetranslationEvent(msg)
+                    .tap(_ => ZIO.logDebug(s"[KAFKA] Точка → gps-events-retranslation vehicleId=$vehicleId"))
+                    .tapError(e => ZIO.logError(s"[KAFKA] Ошибка retranslation: ${e.message}"))
+                    .mapError(e => new Exception(e.message))
+                )
+              yield ()
+            case None => ZIO.unit
+        )
       yield point
     
-    override def onConnect(imei: String, vehicleId: Long, remoteAddress: InetSocketAddress): UIO[Unit] =
+    override def onConnect(imei: String, vehicleId: Long, remoteAddress: InetSocketAddress, protocolName: String): UIO[Unit] =
       val effect = for
         now <- Clock.instant
         ip = remoteAddress.getAddress.getHostAddress
@@ -376,8 +478,8 @@ object GpsProcessingService:
         // HMSET device:{imei} — записываем connection поля в единый Redis HASH
         // Другие сервисы (WebSocket, API, мониторинг) видят что устройство подключено
         connectionFields = DeviceData.connectionToHash(
-          instanceId = "cm-instance",  // TODO: брать из конфигурации (для нескольких CM инстансов)
-          protocol = parser.protocolName,
+          instanceId = instanceId,
+          protocol = protocolName,
           connectedAt = now,
           remoteAddress = s"$ip:$port"
         )
@@ -489,7 +591,7 @@ object GpsProcessingService:
     override def processUnknownDataPacket(
       buffer: ByteBuf,
       imei: String,
-      protocolName: String,
+      parser: ProtocolParser,
       instanceId: String
     ): IO[Throwable, Int] =
       for
@@ -513,7 +615,7 @@ object GpsProcessingService:
             satellites = raw.satellites,
             deviceTime = raw.timestamp,
             serverTime = now,
-            protocol = protocolName,
+            protocol = parser.protocolName,
             instanceId = instanceId
           )
           kafkaProducer.publishUnknownGpsEvent(point)
@@ -522,19 +624,27 @@ object GpsProcessingService:
         }
         _ <- ZIO.logDebug(s"[UNKNOWN-DATA] IMEI=$imei: опубликовано ${rawPoints.size} точек в unknown-gps-events")
       yield rawPoints.size
+    
+    override def refreshDeviceContext(imei: String): IO[Throwable, Option[DeviceData]] =
+      for
+        _ <- ZIO.logDebug(s"[REFRESH] IMEI=$imei: обновление контекста устройства из Redis")
+        deviceData <- redisClient.getDeviceData(imei)
+                        .mapError(e => new Exception(s"Redis ошибка при обновлении контекста: ${e.getMessage}"))
+        _ <- ZIO.logInfo(s"[REFRESH] IMEI=$imei: контекст обновлён, deviceData=${deviceData.isDefined}")
+      yield deviceData
   
   val live: ZLayer[
-    ProtocolParser & RedisClient & KafkaProducer & DeadReckoningFilter & StationaryFilter,
+    AppConfig & RedisClient & KafkaProducer & DeadReckoningFilter & StationaryFilter,
     Nothing,
     GpsProcessingService
   ] = ZLayer {
     for
-      parser <- ZIO.service[ProtocolParser]
+      config <- ZIO.service[AppConfig]
       redis <- ZIO.service[RedisClient]
       kafka <- ZIO.service[KafkaProducer]
       deadReckoning <- ZIO.service[DeadReckoningFilter]
       stationary <- ZIO.service[StationaryFilter]
-    yield Live(parser, redis, kafka, deadReckoning, stationary)
+    yield Live(redis, kafka, deadReckoning, stationary, config.instanceId)
   }
 
 /**
@@ -622,17 +732,16 @@ class ConnectionHandler(
       _ <- ZIO.logDebug(s"[HANDLER] Получен IMEI пакет от $ip, размер=${buffer.readableBytes()} байт")
       
       // Вызываем сервис для аутентификации (HGETALL device:{imei} — один запрос)
-      result <- service.processImeiPacket(buffer, remoteAddr, parser.protocolName)
+      result <- service.processImeiPacket(buffer, remoteAddr, parser)
       (imei, vehicleId, prevPosition, deviceData) = result
       now <- Clock.currentTime(java.util.concurrent.TimeUnit.MILLISECONDS)
       
       // Обновляем состояние соединения — сохраняем DeviceData из Redis HASH
-      // DeviceData содержит ВСЕ: vehicleId, organizationId, флаги, предыдущую позицию
       _ <- stateRef.update { state =>
         val updated = deviceData match
           case Some(dd) => state.withImeiAndDeviceData(imei, vehicleId, now, dd)
           case None     => state.withImei(imei, vehicleId, now)
-        prevPosition.fold(updated)(pos => updated.updatePosition(vehicleId, pos))
+        updated
       }
       _ <- ZIO.logDebug(s"[HANDLER] Состояние обновлено: IMEI=$imei, vehicleId=$vehicleId, deviceData=${deviceData.isDefined}")
       
@@ -640,8 +749,8 @@ class ConnectionHandler(
       _ <- registry.register(imei, ctx, parser)
       _ <- ZIO.logDebug(s"[HANDLER] Соединение зарегистрировано в ConnectionRegistry")
       
-      // Регистрируем подключение в Redis/Kafka
-      _ <- service.onConnect(imei, vehicleId, remoteAddr)
+      // Регистрируем подключение в Redis/Kafka (передаём protocolName для Redis HASH)
+      _ <- service.onConnect(imei, vehicleId, remoteAddr, parser.protocolName)
       
       // Отправляем ACK (подтверждение успешной аутентификации)
       _ <- ZIO.succeed {
@@ -722,21 +831,35 @@ class ConnectionHandler(
       _ <- ZIO.logDebug(s"[HANDLER] Получен DATA пакет от IMEI=$imei, размер=${buffer.readableBytes()} байт")
       
       // Обновляем время последней активности в реестре
-      // Это нужно для IdleConnectionWatcher - чтобы не отключать активные соединения
       _ <- registry.updateLastActivity(imei)
       
-      // Получаем предыдущую позицию из кэша (для фильтрации)
-      prevPosition = state.getPosition(vehicleId)
+      // Проверяем TTL контекста — обновляем из Redis если истёк (раз в час)
+      now <- Clock.currentTime(java.util.concurrent.TimeUnit.MILLISECONDS)
+      currentState <- if state.isContextExpired(now) then
+        for
+          _ <- ZIO.logInfo(s"[HANDLER] IMEI=$imei: контекст устарел (TTL), обновляем из Redis")
+          freshData <- service.refreshDeviceContext(imei).catchAll { error =>
+            ZIO.logWarning(s"[HANDLER] IMEI=$imei: не удалось обновить контекст: ${error.getMessage}") *>
+            ZIO.succeed(state.deviceData) // Используем старые данные при ошибке
+          }
+          newState = freshData match
+            case Some(dd) => state.withUpdatedDeviceData(dd, now)
+            case None     => state.copy(contextCachedAt = now) // Сбрасываем таймер
+          _ <- stateRef.set(newState)
+        yield newState
+      else ZIO.succeed(state)
       
-      // Обрабатываем пакет через сервис (processDataPacket сделает fresh HGETALL!)
-      // Передаём deviceData как fallback — если HGETALL не сработает, используем кэш
-      result <- service.processDataPacket(buffer, imei, vehicleId, prevPosition, state.deviceData)
+      // Получаем предыдущую позицию из in-memory кэша (НЕ из Redis!)
+      prevPosition = currentState.getPreviousPosition
+      
+      // Обрабатываем пакет через сервис — контекст из in-memory кэша ConnectionState
+      result <- service.processDataPacket(buffer, imei, vehicleId, prevPosition, parser, currentState.deviceData)
       (validPoints, totalCount) = result
       
-      // Обновляем кэш последней позицией
+      // Обновляем in-memory кэш последней позицией (без Redis HMSET!)
       _ <- ZIO.foreach(validPoints.lastOption) { lastPoint =>
-        stateRef.update(_.updatePosition(vehicleId, lastPoint)) *>
-        ZIO.logDebug(s"[HANDLER] Кэш обновлён: последняя позиция lat=${lastPoint.latitude}, lon=${lastPoint.longitude}")
+        stateRef.update(_.withLastPosition(lastPoint)) *>
+        ZIO.logDebug(s"[HANDLER] In-memory позиция: lat=${lastPoint.latitude}, lon=${lastPoint.longitude}")
       }
       
       // Отправляем ACK с количеством принятых точек
@@ -771,7 +894,7 @@ class ConnectionHandler(
       _ <- registry.updateLastActivity(imei)
       
       // Обрабатываем через сервис — публикация в unknown-gps-events
-      totalCount <- service.processUnknownDataPacket(buffer, imei, parser.protocolName, "cm-instance")
+      totalCount <- service.processUnknownDataPacket(buffer, imei, parser, instanceId = "cm-instance")
       
       // Отправляем ACK
       _ <- ZIO.succeed {

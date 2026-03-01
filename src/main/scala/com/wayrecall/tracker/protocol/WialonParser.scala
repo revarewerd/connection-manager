@@ -157,25 +157,7 @@ object WialonParser extends ProtocolParser:
   
   /**
    * Кодирование команды для отправки на трекер
-   * Wialon использует текстовые команды
+   * Wialon команды — делегирует в WialonEncoder
    */
   override def encodeCommand(command: Command): IO[ProtocolError, ByteBuf] =
-    ZIO.attempt {
-      import com.wayrecall.tracker.domain.*
-      
-      val cmdText = command match
-        case _: RebootCommand => 
-          "restart"
-        case SetIntervalCommand(_, _, _, interval) => 
-          s"setinterval:$interval"
-        case _: RequestPositionCommand => 
-          "getposition"
-        case SetOutputCommand(_, _, _, idx, enabled) =>
-          s"setoutput:$idx:${if enabled then 1 else 0}"
-        case CustomCommand(_, _, _, text) =>
-          text
-      
-      // Wialon command format: #M#message\r\n
-      val response = s"#M#$cmdText\r\n"
-      Unpooled.copiedBuffer(response, StandardCharsets.UTF_8)
-    }.mapError(e => ProtocolError.ParseError(s"Failed to encode Wialon command: ${e.getMessage}"))
+    com.wayrecall.tracker.command.WialonEncoder.encode(command)

@@ -142,10 +142,10 @@ object WialonBinaryParser extends ProtocolParser:
     Unpooled.buffer(0)
   
   /**
-   * Кодирование команды для отправки на трекер
+   * Кодирование команды — делегирует в WialonEncoder (текстовый формат)
    */
   override def encodeCommand(command: Command): IO[ProtocolError, ByteBuf] =
-    ZIO.fail(ProtocolError.ParseError("Wialon binary commands не реализованы"))
+    com.wayrecall.tracker.command.WialonEncoder.encode(command)
   
   // ============ Вспомогательные функции для чтения little-endian ============
   

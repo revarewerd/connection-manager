@@ -1,0 +1,26 @@
+# Scala / sbt
+target/
+project/target/
+project/project/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Metals / Bloop
+.metals/
+.bloop/
+metals.sbt
+
+# OS
+.DS_Store
+
+# Docs (old)
+docsOld/
+
+# Env / secrets
+.env
+*.p12
+*.pem
+application.local.conf

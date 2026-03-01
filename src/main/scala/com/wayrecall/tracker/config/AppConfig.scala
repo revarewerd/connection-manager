@@ -14,11 +14,32 @@ final case class TcpProtocolConfig(
     enabled: Boolean
 )
 
+/**
+ * Конфигурация мульти-протокольного порта (один порт → все протоколы)
+ */
+final case class MultiProtocolPortConfig(
+    port: Int,
+    enabled: Boolean
+)
+
 final case class TcpConfig(
     teltonika: TcpProtocolConfig,
     wialon: TcpProtocolConfig,
     ruptela: TcpProtocolConfig,
     navtelecom: TcpProtocolConfig,
+    gosafe: TcpProtocolConfig,
+    skysim: TcpProtocolConfig,
+    autophoneMayak: TcpProtocolConfig,
+    dtm: TcpProtocolConfig,
+    galileosky: TcpProtocolConfig,
+    concox: TcpProtocolConfig,
+    tk102: TcpProtocolConfig,
+    tk103: TcpProtocolConfig,
+    arnavi: TcpProtocolConfig,
+    adm: TcpProtocolConfig,
+    gtlt: TcpProtocolConfig,
+    microMayak: TcpProtocolConfig,
+    multi: MultiProtocolPortConfig,    // Мульти-протокольный порт для автодетекции
     bossThreads: Int,
     workerThreads: Int,
     maxConnections: Int,
@@ -59,6 +80,7 @@ final case class KafkaTopicsConfig(
     gpsEvents: String,
     gpsEventsRules: String,
     gpsEventsRetranslation: String,
+    gpsParseErrors: String,
     deviceStatus: String,
     deviceCommands: String,
     deviceEvents: String,

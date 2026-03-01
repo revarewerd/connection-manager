@@ -444,3 +444,27 @@ case class DeviceEvent(
     vehicleConfig: Option[VehicleConfig] = None,
     timestamp: Long = 0L
 ) derives JsonCodec
+
+/**
+ * Событие ошибки парсинга GPS-пакета
+ * 
+ * Публикуется в Kafka топик "gps-parse-errors" когда парсер
+ * не может обработать пакет от трекера.
+ * 
+ * Используется для:
+ * - Мониторинга качества данных от трекеров
+ * - Диагностики проблем с протоколами
+ * - Обнаружения несовместимых прошивок
+ * - Статистика ошибок в Grafana
+ */
+case class GpsParseErrorEvent(
+    imei: String,                  // IMEI трекера (может быть пустой если не удалось определить)
+    protocol: String,              // Название протокола (teltonika, wialon, etc.)
+    errorType: String,             // Тип ошибки: CrcMismatch, InvalidField, UnsupportedCodec и т.д.
+    errorMessage: String,          // Описание ошибки
+    rawPacketHex: Option[String],  // Hex-дамп пакета (первые 512 байт)
+    rawPacketSize: Int,            // Размер исходного пакета
+    remoteAddress: String,         // IP адрес трекера
+    instanceId: String,            // ID инстанса CM
+    timestamp: Long                // Время сервера
+) derives JsonCodec

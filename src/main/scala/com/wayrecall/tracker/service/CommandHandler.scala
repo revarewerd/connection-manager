@@ -9,6 +9,7 @@ import org.apache.kafka.common.TopicPartition
 import io.netty.buffer.Unpooled
 import java.nio.charset.StandardCharsets
 import com.wayrecall.tracker.domain.*
+import com.wayrecall.tracker.command.CommandEncoder
 import com.wayrecall.tracker.network.{ConnectionRegistry, ConnectionEntry}
 import com.wayrecall.tracker.storage.{RedisClient, KafkaProducer}
 import com.wayrecall.tracker.config.AppConfig
@@ -98,28 +99,32 @@ object CommandHandler:
     
     /**
      * Отправляет команду на трекер через TCP
+     *
+     * Использует CommandEncoder для кодирования в протокол-специфичный формат.
+     * Если протокол не поддерживает данную команду → ProtocolError.UnsupportedProtocol.
+     * Для NavTelecom: если SetOutputCommand → автоматически отправляем PasswordCommand перед IOSwitch.
      */
     private def sendCommandToTracker(command: Command, conn: ConnectionEntry): Task[Unit] =
-      ZIO.attempt {
-        // Формируем команду в протоколе трекера
-        val commandBytes = formatCommandForProtocol(command, conn.parser.protocolName)
-        val buffer = Unpooled.wrappedBuffer(commandBytes)
+      val encoder = CommandEncoder.forProtocol(conn.parser.protocolName)
+      
+      for
+        // Проверяем поддержку команды протоколом
+        _ <- ZIO.unless(encoder.supports(command))(
+               ZIO.fail(new RuntimeException(
+                 s"Протокол ${conn.parser.protocolName} не поддерживает команду ${command.getClass.getSimpleName}"
+               ))
+             )
+        
+        // Кодируем команду в бинарный формат протокола
+        buffer <- encoder.encode(command)
+                    .mapError(e => new RuntimeException(e.message))
         
         // Отправляем через Netty channel
-        conn.ctx.writeAndFlush(buffer)
+        _ <- ZIO.attempt(conn.ctx.writeAndFlush(buffer))
         
-        ZIO.logInfo(s"[COMMAND] ✓ Команда ${command.commandId} отправлена на трекер ${command.imei}")
-      }.flatten
-    
-    /**
-     * Форматирует команду в протоколе трекера
-     * 
-     * TODO: Реализовать форматирование для каждого протокола
-     * Teltonika, Wialon, Ruptela, NavTelecom имеют разные форматы команд
-     */
-    private def formatCommandForProtocol(command: Command, protocol: String): Array[Byte] =
-      // Временная заглушка - возвращаем JSON (для тестов)
-      command.toJson.getBytes(StandardCharsets.UTF_8)
+        _ <- ZIO.logInfo(s"[COMMAND] ✓ Команда ${command.commandId} отправлена на ${command.imei} " +
+               s"(протокол=${conn.parser.protocolName}, тип=${command.getClass.getSimpleName})")
+      yield ()
     
     /**
      * Добавляет команду в in-memory очередь + Redis backup

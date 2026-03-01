@@ -3,6 +3,7 @@ package com.wayrecall.tracker.network
 import zio.*
 import io.netty.channel.ChannelHandlerContext
 import com.wayrecall.tracker.protocol.ProtocolParser
+import com.wayrecall.tracker.domain.GpsRawPoint
 
 /**
  * Реестр активных TCP соединений
@@ -64,7 +65,8 @@ final case class ConnectionEntry(
     ctx: ChannelHandlerContext,
     parser: ProtocolParser,
     connectedAt: Long,
-    lastActivityAt: Long
+    lastActivityAt: Long,
+    lastPosition: Option[GpsRawPoint] = None
 )
 
 object ConnectionRegistry:
