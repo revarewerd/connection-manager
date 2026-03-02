@@ -5,7 +5,7 @@ import zio.json.*
 import org.apache.kafka.clients.producer.{KafkaProducer => JavaKafkaProducer, ProducerConfig, ProducerRecord, RecordMetadata, Callback}
 import org.apache.kafka.common.serialization.StringSerializer
 import com.wayrecall.tracker.domain.{GpsPoint, GpsEventMessage, DeviceStatus, UnknownDeviceEvent, UnknownGpsPoint, GpsParseErrorEvent, KafkaError}
-import com.wayrecall.tracker.config.KafkaConfig
+import com.wayrecall.tracker.config.{KafkaConfig, AppConfig}
 import java.util.Properties
 
 /**
@@ -62,17 +62,35 @@ object KafkaProducer:
    */
   final case class Live(
       producer: JavaKafkaProducer[String, String],
-      config: KafkaConfig
+      config: KafkaConfig,
+      debugMode: Boolean = false
   ) extends KafkaProducer:
     
     override def publish(topic: String, key: String, value: String): IO[KafkaError, Unit] =
-      ZIO.async { callback =>
+      val debugLog = if debugMode then
+        ZIO.logInfo(
+          s"""[DEBUG-KAFKA] → Отправка в Kafka
+             |  ├── Топик: $topic
+             |  ├── Ключ:  $key
+             |  ├── Размер: ${value.length} символов
+             |  └── JSON:  ${if value.length > 500 then value.take(500) + "... (обрезано)" else value}""".stripMargin
+        )
+      else ZIO.unit
+      
+      debugLog *> ZIO.async { callback =>
         val record = new ProducerRecord[String, String](topic, key, value)
         producer.send(record, (metadata: RecordMetadata, exception: Exception) =>
           if exception != null then
             callback(ZIO.fail(KafkaError.ProducerError(exception.getMessage)))
           else
-            callback(ZIO.unit)
+            if debugMode then
+              callback(
+                ZIO.logInfo(
+                  s"[DEBUG-KAFKA] ✓ Отправлено в $topic partition=${metadata.partition()} offset=${metadata.offset()}"
+                ) *> ZIO.unit
+              )
+            else
+              callback(ZIO.unit)
         )
       }
     
@@ -114,6 +132,7 @@ object KafkaProducer:
   
   /**
    * ZIO Layer с управлением ресурсами
+   * Принимает KafkaConfig + опционально AppConfig (для debugMode)
    */
   val live: ZLayer[KafkaConfig, Throwable, KafkaProducer] =
     ZLayer.scoped {
@@ -143,4 +162,38 @@ object KafkaProducer:
             .tap(_ => ZIO.logInfo("Kafka producer закрыт"))
         )
       yield Live(producer, config)
+    }
+  
+  /**
+   * ZIO Layer с debug-режимом — логирует каждое сообщение в Kafka
+   */
+  val liveWithDebug: ZLayer[KafkaConfig & AppConfig, Throwable, KafkaProducer] =
+    ZLayer.scoped {
+      for
+        config <- ZIO.service[KafkaConfig]
+        appConfig <- ZIO.service[AppConfig]
+        
+        // Создаем properties для Kafka producer
+        props = {
+          val p = new Properties()
+          p.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, config.bootstrapServers)
+          p.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, classOf[StringSerializer].getName)
+          p.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, classOf[StringSerializer].getName)
+          p.put(ProducerConfig.ACKS_CONFIG, config.producer.acks)
+          p.put(ProducerConfig.RETRIES_CONFIG, config.producer.retries.toString)
+          p.put(ProducerConfig.BATCH_SIZE_CONFIG, config.producer.batchSize.toString)
+          p.put(ProducerConfig.LINGER_MS_CONFIG, config.producer.lingerMs.toString)
+          p.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, config.producer.compressionType)
+          p
+        }
+        
+        // Создаем producer с автоматическим закрытием + debug mode
+        producer <- ZIO.acquireRelease(
+          ZIO.attempt(new JavaKafkaProducer[String, String](props))
+            .tap(_ => ZIO.logInfo(s"Kafka producer создан: ${config.bootstrapServers} (debug=${appConfig.debugMode})"))
+        )(prod => 
+          ZIO.attempt(prod.close()).orDie
+            .tap(_ => ZIO.logInfo("Kafka producer закрыт"))
+        )
+      yield Live(producer, config, appConfig.debugMode)
     }

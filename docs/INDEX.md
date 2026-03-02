@@ -14,6 +14,7 @@
 | 6 | [KAFKA.md](KAFKA.md) | 10 produce + 2 consume топиков, маршрутизация, gps-parse-errors |
 | 7 | [DECISIONS.md](DECISIONS.md) | 11 ADR: Redis→InMemory, parser-as-param, 18 протоколов, command encoders, all-points, parse-errors |
 | 8 | [RUNBOOK.md](RUNBOOK.md) | Запуск, диагностика, типичные проблемы, мониторинг |
+| 9 | [TESTING.md](TESTING.md) | Тестирование: 286+ тестов, протоколы, команды, API, фильтры |
 
 ## Что нового в v4.0
 

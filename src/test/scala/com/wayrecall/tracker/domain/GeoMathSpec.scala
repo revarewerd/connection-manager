@@ -33,7 +33,7 @@ object GeoMathSpec extends ZIOSpecDefault:
         val distanceKm = distance / 1000.0
         
         // Ожидаем ~633-637 км (с погрешностью)
-        assertTrue(distanceKm > 630 && distanceKm < 640)
+        assertTrue(distanceKm > 630.0) && assertTrue(distanceKm < 640.0)
       },
       
       // Тест 3: Малое расстояние (100 метров)
@@ -46,7 +46,7 @@ object GeoMathSpec extends ZIOSpecDefault:
         val distance = GeoMath.haversineDistance(lat1, lon1, lat2, lon2)
         
         // Ожидаем ~100м с погрешностью 10%
-        assertTrue(distance > 90 && distance < 110)
+        assertTrue(distance > 90.0) && assertTrue(distance < 110.0)
       },
       
       // Тест 4: Симметричность (A→B = B→A)
@@ -69,7 +69,7 @@ object GeoMathSpec extends ZIOSpecDefault:
         val distanceKm = distance / 1000.0
         
         // Четверть окружности Земли ~10 000 км
-        assertTrue(distanceKm > 9900 && distanceKm < 10100)
+        assertTrue(distanceKm > 9900.0) && assertTrue(distanceKm < 10100.0)
       }
     )
   )

@@ -69,7 +69,7 @@ object RateLimiterSpec extends ZIOSpecDefault:
           _ <- TestClock.adjust(2.seconds)         // Ждём истечения окна
           r3 <- limiter.tryAcquire("192.168.1.1")  // Должен быть разрешён
         yield assertTrue(r1 && !r2 && r3)
-      } @@ TestAspect.withLiveClock
+      }
     ),
     
     suite("getConnectionCount")(

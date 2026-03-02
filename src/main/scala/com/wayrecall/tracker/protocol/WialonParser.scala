@@ -31,7 +31,11 @@ object WialonParser extends ProtocolParser:
       if content.startsWith(LOGIN_PREFIX) then
         // #L#imei;password\r\n
         val parts = content.drop(LOGIN_PREFIX.length).split(";")
-        if parts.nonEmpty then parts(0).trim
+        if parts.nonEmpty then
+          val imei = parts(0).trim
+          if imei.isEmpty || imei.length < 10 || !imei.forall(_.isDigit) then
+            throw new RuntimeException(s"Невалидный IMEI Wialon: '$imei'")
+          imei
         else throw new RuntimeException("Empty IMEI in login packet")
       else
         throw new RuntimeException(s"Expected login packet (#L#), got: ${content.take(10)}")

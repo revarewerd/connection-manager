@@ -167,6 +167,7 @@ final case class RateLimitConfig(
  */
 final case class AppConfig(
     instanceId: String,        // Уникальный ID инстанса (cm-instance-1, cm-instance-2, ...)
+    debugMode: Boolean = false, // Подробные debug логи (hex-дампы пакетов, все поля точек). ТОЛЬКО для тестового стенда!
     tcp: TcpConfig,
     http: HttpConfig,
     redis: RedisConfig,
@@ -178,6 +179,23 @@ final case class AppConfig(
 )
 
 object AppConfig:
+  
+  // Явные given instances для вложенных case class (TcpConfig слишком большой для auto-derive)
+  given DeriveConfig[TcpProtocolConfig] = DeriveConfig.derived
+  given DeriveConfig[MultiProtocolPortConfig] = DeriveConfig.derived
+  given DeriveConfig[TcpConfig] = DeriveConfig.derived
+  given DeriveConfig[HttpConfig] = DeriveConfig.derived
+  given DeriveConfig[RedisConfig] = DeriveConfig.derived
+  given DeriveConfig[KafkaProducerSettings] = DeriveConfig.derived
+  given DeriveConfig[KafkaConsumerSettings] = DeriveConfig.derived
+  given DeriveConfig[KafkaTopicsConfig] = DeriveConfig.derived
+  given DeriveConfig[KafkaConfig] = DeriveConfig.derived
+  given DeriveConfig[DeadReckoningFilterConfig] = DeriveConfig.derived
+  given DeriveConfig[StationaryFilterConfig] = DeriveConfig.derived
+  given DeriveConfig[FiltersConfig] = DeriveConfig.derived
+  given DeriveConfig[CommandsConfig] = DeriveConfig.derived
+  given DeriveConfig[LoggingConfig] = DeriveConfig.derived
+  given DeriveConfig[RateLimitConfig] = DeriveConfig.derived
   
   /**
    * Конфигурационный дескриптор с автоматическим выводом через magnolia

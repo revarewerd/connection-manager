@@ -87,26 +87,38 @@ object Main extends ZIOAppDefault:
       // Шаг 6: Запуск TCP серверов (параллельно, т.к. независимы)
       _ <- ZIO.logInfo("[6/7] Запуск TCP серверов...")
       
+      // ============================================================
+      // Создаем парсеры (с debug-обёрткой если debugMode включен)
+      // ============================================================
+      debug = config.debugMode
+      _ <- if debug then ZIO.logWarning("[DEBUG] 🔍 DEBUG MODE ВКЛЮЧЕН — все пакеты будут логироваться с hex-дампами!")
+           else ZIO.logInfo("Debug mode: выключен (для включения: debug-mode = true)")
+      
+      // Хелпер: оборачивает парсер в debug-обёртку если нужно
+      maybeWrap = (p: ProtocolParser) => 
+        if debug then DebugProtocolParser.wrap(p) else p
+      
       // Создаем фабрики обработчиков для каждого протокола
-      teltonikaFactory = ConnectionHandler.factory(service, new TeltonikaParser, registry, runtime)
-      wialonFactory = ConnectionHandler.factory(service, WialonAdapterParser, registry, runtime)
-      ruptelaFactory = ConnectionHandler.factory(service, RuptelaParser, registry, runtime)
-      navtelecomFactory = ConnectionHandler.factory(service, NavTelecomParser, registry, runtime)
-      gosafeFactory = ConnectionHandler.factory(service, GoSafeParser, registry, runtime)
-      skysimFactory = ConnectionHandler.factory(service, SkySimParser, registry, runtime)
-      autophoneFactory = ConnectionHandler.factory(service, AutophoneMayakParser, registry, runtime)
-      dtmFactory = ConnectionHandler.factory(service, DtmParser, registry, runtime)
-      galileoskyFactory = ConnectionHandler.factory(service, GalileoskyParser, registry, runtime)
-      concoxFactory = ConnectionHandler.factory(service, ConcoxParser, registry, runtime)
-      tk102Factory = ConnectionHandler.factory(service, TK102Parser.tk102, registry, runtime)
-      tk103Factory = ConnectionHandler.factory(service, TK102Parser.tk103, registry, runtime)
-      arnaviFactory = ConnectionHandler.factory(service, ArnaviParser, registry, runtime)
-      admFactory = ConnectionHandler.factory(service, AdmParser, registry, runtime)
-      gtltFactory = ConnectionHandler.factory(service, GtltParser, registry, runtime)
-      microMayakFactory = ConnectionHandler.factory(service, MicroMayakParser, registry, runtime)
+      teltonikaFactory = ConnectionHandler.factory(service, maybeWrap(new TeltonikaParser), registry, runtime)
+      wialonFactory = ConnectionHandler.factory(service, maybeWrap(WialonAdapterParser), registry, runtime)
+      ruptelaFactory = ConnectionHandler.factory(service, maybeWrap(RuptelaParser), registry, runtime)
+      navtelecomFactory = ConnectionHandler.factory(service, maybeWrap(NavTelecomParser), registry, runtime)
+      gosafeFactory = ConnectionHandler.factory(service, maybeWrap(GoSafeParser), registry, runtime)
+      skysimFactory = ConnectionHandler.factory(service, maybeWrap(SkySimParser), registry, runtime)
+      autophoneFactory = ConnectionHandler.factory(service, maybeWrap(AutophoneMayakParser), registry, runtime)
+      dtmFactory = ConnectionHandler.factory(service, maybeWrap(DtmParser), registry, runtime)
+      galileoskyFactory = ConnectionHandler.factory(service, maybeWrap(GalileoskyParser), registry, runtime)
+      concoxFactory = ConnectionHandler.factory(service, maybeWrap(ConcoxParser), registry, runtime)
+      tk102Factory = ConnectionHandler.factory(service, maybeWrap(TK102Parser.tk102), registry, runtime)
+      tk103Factory = ConnectionHandler.factory(service, maybeWrap(TK102Parser.tk103), registry, runtime)
+      arnaviFactory = ConnectionHandler.factory(service, maybeWrap(ArnaviParser), registry, runtime)
+      admFactory = ConnectionHandler.factory(service, maybeWrap(AdmParser), registry, runtime)
+      gtltFactory = ConnectionHandler.factory(service, maybeWrap(GtltParser), registry, runtime)
+      microMayakFactory = ConnectionHandler.factory(service, maybeWrap(MicroMayakParser), registry, runtime)
       
       // Мульти-протокольный парсер — автодетекция по magic bytes первого пакета
-      multiParser = MultiProtocolParser.asProtocolParser()
+      multiParsers = if debug then DebugProtocolParser.wrapEntries(MultiProtocolParser.defaultParsers) else MultiProtocolParser.defaultParsers
+      multiParser = MultiProtocolParser.asProtocolParser(multiParsers)
       multiFactory = ConnectionHandler.factory(service, multiParser, registry, runtime)
       
       // Запускаем TCP серверы параллельно (каждый на своём порту)
@@ -214,7 +226,7 @@ object Main extends ZIOAppDefault:
     
     // Инфраструктурные слои
     val redisLayer = redisConfigLayer >>> RedisClient.live
-    val kafkaLayer = kafkaConfigLayer >>> KafkaProducer.live
+    val kafkaLayer = (kafkaConfigLayer ++ configLayer) >>> KafkaProducer.liveWithDebug
     
     // Rate limiter (для защиты от flood атак)
     val rateLimiterLayer = configLayer >>> RateLimiter.live

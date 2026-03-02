@@ -28,7 +28,7 @@ object ConnectionRegistrySpec extends ZIOSpecDefault:
     
     // Остальные методы не используются в тестах
     def alloc() = ???
-    def attr(key: io.netty.util.AttributeKey[?]) = ???
+    def attr[T](key: io.netty.util.AttributeKey[T]): io.netty.util.Attribute[T] = ???
     def bind(localAddress: java.net.SocketAddress) = ???
     def bind(localAddress: java.net.SocketAddress, promise: io.netty.channel.ChannelPromise) = ???
     def channel() = ???
@@ -53,7 +53,7 @@ object ConnectionRegistrySpec extends ZIOSpecDefault:
     def fireUserEventTriggered(event: Object) = ???
     def flush() = ???
     def handler() = ???
-    def hasAttr(key: io.netty.util.AttributeKey[?]) = ???
+    def hasAttr[T](key: io.netty.util.AttributeKey[T]): Boolean = ???
     def isRemoved() = ???
     def name() = ???
     def newFailedFuture(cause: Throwable) = ???
@@ -199,7 +199,7 @@ object ConnectionRegistrySpec extends ZIOSpecDefault:
           _ <- TestClock.adjust(10.seconds)
           idle <- registry.getIdleConnections(5000)  // 5 секунд idle
         yield assertTrue(idle.length == 1)
-      } @@ TestAspect.withLiveClock,
+      },
       
       test("не возвращает активные соединения") {
         for
