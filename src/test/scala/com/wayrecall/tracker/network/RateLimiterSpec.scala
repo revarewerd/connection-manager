@@ -39,7 +39,7 @@ object RateLimiterSpec extends ZIOSpecDefault:
           r1 <- limiter.tryAcquire("192.168.1.1")
           r2 <- limiter.tryAcquire("192.168.1.1")
           r3 <- limiter.tryAcquire("192.168.1.1")
-        yield assertTrue(r1 && r2 && r3)
+        yield assertTrue(r1, r2, r3)
       },
       
       test("блокирует при превышении лимита") {
@@ -58,7 +58,7 @@ object RateLimiterSpec extends ZIOSpecDefault:
           _ <- limiter.tryAcquire("192.168.1.1")
           r1 <- limiter.tryAcquire("192.168.1.1")  // Должен быть заблокирован
           r2 <- limiter.tryAcquire("192.168.1.2")  // Другой IP - должен быть разрешён
-        yield assertTrue(!r1 && r2)
+        yield assertTrue(!r1, r2)
       },
       
       test("восстанавливается после истечения окна") {
@@ -68,7 +68,7 @@ object RateLimiterSpec extends ZIOSpecDefault:
           r2 <- limiter.tryAcquire("192.168.1.1")  // Должен быть заблокирован
           _ <- TestClock.adjust(2.seconds)         // Ждём истечения окна
           r3 <- limiter.tryAcquire("192.168.1.1")  // Должен быть разрешён
-        yield assertTrue(r1 && !r2 && r3)
+        yield assertTrue(r1, !r2, r3)
       }
     ),
     
@@ -109,7 +109,7 @@ object RateLimiterSpec extends ZIOSpecDefault:
           _ <- limiter.tryAcquire("192.168.1.2")
           stats <- limiter.getStats
         yield assertTrue(
-          stats.get("192.168.1.1").contains(2) &&
+          stats.get("192.168.1.1").contains(2),
           stats.get("192.168.1.2").contains(1)
         )
       }

@@ -56,8 +56,8 @@ object DtmEncoderSpec extends ZIOSpecDefault:
         _ = buf.release()
       } yield {
         assertTrue(
-          bytes(0) == 0x7B.toByte &&     // Начало пакета
-          bytes(2) == 0xFF.toByte &&      // Маркер IOSwitch
+          bytes(0) == 0x7B.toByte,     // Начало пакета
+          bytes(2) == 0xFF.toByte,      // Маркер IOSwitch
           bytes(bytes.length - 1) == 0x7D.toByte  // Конец пакета
         )
       }
@@ -188,7 +188,7 @@ object DtmEncoderSpec extends ZIOSpecDefault:
     test("capabilities — только setOutput") {
       val caps = encoder.capabilities
       assertTrue(
-        caps.supportedCommands == Set("setOutput") &&
+        caps.supportedCommands == Set("setOutput"),
         caps.maxOutputs == 2
       )
     }

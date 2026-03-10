@@ -289,7 +289,9 @@ case class GpsEventMessage(
     isMoving: Boolean = true,
     isValid: Boolean = true,
     protocol: String = "",
-    instanceId: String = ""
+    instanceId: String = "",
+    // ID устройства (None = неизвестен, HW использует vehicleId как fallback)
+    deviceId: Option[Long] = None
 ) derives JsonCodec
 
 /**

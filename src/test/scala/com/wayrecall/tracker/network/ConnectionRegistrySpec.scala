@@ -140,7 +140,7 @@ object ConnectionRegistrySpec extends ZIOSpecDefault:
           (ctx, _) <- makeMockContext
           _ <- registry.register("123456789012345", ctx, MockParser)
           found <- registry.findByImei("123456789012345")
-        yield assertTrue(found.isDefined && found.get.imei == "123456789012345")
+        yield assertTrue(found.isDefined, found.get.imei == "123456789012345")
       },
       
       test("возвращает None для несуществующего") {
@@ -182,8 +182,8 @@ object ConnectionRegistrySpec extends ZIOSpecDefault:
           _ <- registry.updateLastActivity("123456789012345")
           entry2 <- registry.findByImei("123456789012345")
         yield assertTrue(
-          entry1.isDefined && 
-          entry2.isDefined && 
+          entry1.isDefined, 
+          entry2.isDefined, 
           entry2.get.lastActivityAt >= entry1.get.lastActivityAt
         )
       }

@@ -287,11 +287,11 @@ object TeltonikaEncoderSpec extends ZIOSpecDefault:
     test("capabilities содержит все поддерживаемые команды") {
       val caps = encoder.capabilities
       assertTrue(
-        caps.supportedCommands.contains("reboot") &&
-        caps.supportedCommands.contains("setInterval") &&
-        caps.supportedCommands.contains("requestPosition") &&
-        caps.supportedCommands.contains("setOutput") &&
-        caps.supportedCommands.contains("custom") &&
+        caps.supportedCommands.contains("reboot"),
+        caps.supportedCommands.contains("setInterval"),
+        caps.supportedCommands.contains("requestPosition"),
+        caps.supportedCommands.contains("setOutput"),
+        caps.supportedCommands.contains("custom"),
         caps.supportedCommands.contains("setParameter")
       )
     },

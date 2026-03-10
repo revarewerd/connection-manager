@@ -110,6 +110,7 @@ object DeviceEventConsumer:
       event.vehicleConfig match
         case Some(config) =>
           val fields = Map(
+            "vehicleId" -> event.vehicleId.toString,
             "organizationId" -> config.organizationId.toString,
             "name" -> config.name,
             "hasGeozones" -> config.hasGeozones.toString,
