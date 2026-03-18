@@ -119,8 +119,8 @@ object GtltParser extends ProtocolParser:
       if eastWest == "W" then lon = -lon
       
       // Скорость и курс
-      val speed = speedStr.toDouble.toInt
-      val direction = directionStr.toDouble.toInt
+      val speed = speedStr.toDoubleOption.getOrElse(0.0).toInt
+      val direction = directionStr.toDoubleOption.getOrElse(0.0).toInt
       
       // Дата и время
       val date = LocalDate.parse(dateStr, dateFormat).atStartOfDay(ZoneId.of("UTC"))

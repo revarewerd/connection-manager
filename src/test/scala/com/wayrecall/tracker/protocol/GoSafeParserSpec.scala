@@ -88,6 +88,20 @@ object GoSafeParserSpec extends ZIOSpecDefault:
           assertTrue(points.nonEmpty) &&
           assertTrue(points.head.latitude > 55.0) &&
           assertTrue(points.head.longitude > 37.0)
+      },
+
+      test("невалидные числа (course/altitude/satellites) → 0 вместо crash") {
+        // Подставляем "abc" вместо числовых полей course, altitude, satellites
+        val frame = "$352093082745395,010326120000,55.753215,N,037.621356,E,032.4,abc,xyz,NaN,1.2,000#"
+        val buffer = Unpooled.copiedBuffer(frame, US_ASCII)
+
+        for
+          points <- parser.parseData(buffer, "352093082745395")
+        yield
+          assertTrue(points.nonEmpty) &&
+          assertTrue(points.head.angle == 0) &&
+          assertTrue(points.head.altitude == 0) &&
+          assertTrue(points.head.satellites == 0)
       }
     ),
 

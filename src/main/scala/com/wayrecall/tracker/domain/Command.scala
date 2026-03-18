@@ -390,6 +390,7 @@ object CommandCapability:
       case "ruptela"                    => Ruptela
       case "galileosky"                 => Galileosky
       case "arnavi"                     => Arnavi
+      case "neomatica"                  => ReceiveOnly
       case "wialon" | "wialon-binary"   => Wialon
       case _                            => ReceiveOnly
 

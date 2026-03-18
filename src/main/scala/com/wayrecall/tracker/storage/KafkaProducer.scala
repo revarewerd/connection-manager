@@ -130,6 +130,23 @@ object KafkaProducer:
         .mapError(e => KafkaError.SerializationError(e.getMessage))
         .flatMap(json => publish(topic, key, json))
   
+  // Общая функция создания Properties (дедупликация C-5 + M-6)
+  private def buildProducerProps(config: KafkaConfig): Properties =
+    val p = new Properties()
+    p.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, config.bootstrapServers)
+    p.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, classOf[StringSerializer].getName)
+    p.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, classOf[StringSerializer].getName)
+    p.put(ProducerConfig.ACKS_CONFIG, config.producer.acks)
+    p.put(ProducerConfig.RETRIES_CONFIG, config.producer.retries.toString)
+    p.put(ProducerConfig.BATCH_SIZE_CONFIG, config.producer.batchSize.toString)
+    p.put(ProducerConfig.LINGER_MS_CONFIG, config.producer.lingerMs.toString)
+    p.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, config.producer.compressionType)
+    // Оптимизация для 100K+ соединений: увеличенный буфер и ограничение блокировки
+    p.put(ProducerConfig.BUFFER_MEMORY_CONFIG, (256L * 1024 * 1024).toString)   // 256MB
+    p.put(ProducerConfig.MAX_BLOCK_MS_CONFIG, "5000")                           // 5 сек макс блокировка
+    p.put(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION, "10")           // Параллельные запросы
+    p
+
   /**
    * ZIO Layer с управлением ресурсами
    * Принимает KafkaConfig + опционально AppConfig (для debugMode)
@@ -138,20 +155,7 @@ object KafkaProducer:
     ZLayer.scoped {
       for
         config <- ZIO.service[KafkaConfig]
-        
-        // Создаем properties для Kafka producer
-        props = {
-          val p = new Properties()
-          p.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, config.bootstrapServers)
-          p.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, classOf[StringSerializer].getName)
-          p.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, classOf[StringSerializer].getName)
-          p.put(ProducerConfig.ACKS_CONFIG, config.producer.acks)
-          p.put(ProducerConfig.RETRIES_CONFIG, config.producer.retries.toString)
-          p.put(ProducerConfig.BATCH_SIZE_CONFIG, config.producer.batchSize.toString)
-          p.put(ProducerConfig.LINGER_MS_CONFIG, config.producer.lingerMs.toString)
-          p.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, config.producer.compressionType)
-          p
-        }
+        props = buildProducerProps(config)
         
         // Создаем producer с автоматическим закрытием
         producer <- ZIO.acquireRelease(
@@ -172,20 +176,7 @@ object KafkaProducer:
       for
         config <- ZIO.service[KafkaConfig]
         appConfig <- ZIO.service[AppConfig]
-        
-        // Создаем properties для Kafka producer
-        props = {
-          val p = new Properties()
-          p.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, config.bootstrapServers)
-          p.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, classOf[StringSerializer].getName)
-          p.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, classOf[StringSerializer].getName)
-          p.put(ProducerConfig.ACKS_CONFIG, config.producer.acks)
-          p.put(ProducerConfig.RETRIES_CONFIG, config.producer.retries.toString)
-          p.put(ProducerConfig.BATCH_SIZE_CONFIG, config.producer.batchSize.toString)
-          p.put(ProducerConfig.LINGER_MS_CONFIG, config.producer.lingerMs.toString)
-          p.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, config.producer.compressionType)
-          p
-        }
+        props = buildProducerProps(config)
         
         // Создаем producer с автоматическим закрытием + debug mode
         producer <- ZIO.acquireRelease(

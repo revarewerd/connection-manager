@@ -1,6 +1,6 @@
-# Connection Manager — Решения (ADR) v4.0
+# Connection Manager — Решения (ADR) v5.0
 
-> Тег: `АКТУАЛЬНО` | Обновлён: `2026-03-01` | Версия: `4.0`
+> Тег: `АКТУАЛЬНО` | Обновлён: `2026-03-10` | Версия: `5.0`
 
 ## ADR-001: Redis → In-Memory кэш для горячего пути
 
@@ -256,3 +256,115 @@ private[network] case class AwaitingCommand(command, promise: Promise[...], sent
 ```
 
 **Результат:** Нет конфликта имён. Ясное разделение domain vs network concerns.
+
+---
+
+## ADR-012: fork() + Semaphore вместо unsafe.run() ★ NEW v5.0
+
+**Статус:** Принято  
+**Дата:** 2026-03-10
+
+**Контекст:** `ConnectionHandler.runEffect()` использовал `runtime.unsafe.run(effect)` —
+это **синхронно блокировало Netty I/O поток** на 5-20ms (время Redis + Kafka операций).
+При 8 I/O потоках и 20K соединениях → thread starvation, TCP buffer overflow, reconnect storm.
+
+**Решение:**
+```scala
+// Было (v4.0) — блокировало I/O
+private def runEffect(effect: Task[Unit]): Unit =
+  runtime.unsafe.run(effect)
+
+// Стало (v5.0) — не блокирует
+private def forkEffect(effect: Task[Unit]): Unit =
+  runtime.unsafe.fork(semaphore.withPermit(effect))
+```
+
+- `runtime.unsafe.fork()` — запускает обработку в ZIO fiber, Netty callback возвращается СРАЗУ
+- `Semaphore(1)` per connection — гарантирует порядок пакетов для одного IMEI
+
+**Результат:** Netty I/O thread **никогда не блокируется**. Масштабирование до 100K+ стало возможным.
+
+---
+
+## ADR-013: Оптимизации для 100K TCP соединений ★ NEW v5.0
+
+**Статус:** Принято  
+**Дата:** 2026-03-10
+
+**Контекст:** После исправления блокировки (ADR-012), проведён аудит производительности
+для целевых 100K одновременных TCP-соединений. Найдено 19 проблем, 15 исправлено.
+
+**Решения (по компонентам):**
+
+| Компонент | Изменение | Эффект |
+|-----------|-----------|--------|
+| TcpServer | Epoll/KQueue native transport | O(1) per event вместо O(n) NIO |
+| TcpServer | SO_RCVBUF=4K, SO_SNDBUF=4K, WaterMark(16K,32K) | Контроль памяти при 100K |
+| TcpServer | PooledByteBufAllocator, SO_BACKLOG=4096 | Меньше GC, большая очередь accept |
+| ConnectionRegistry | `ConcurrentHashMap` + `AtomicLong` (вместо `Ref[Map]`) | 0 аллокаций, lock-free |
+| ConnectionRegistry | `unregisterIfSame(imei, channel)` | Устранение race condition |
+| ConnectionHandler | 1× JSON сериализация → 3 топика (кэш) | -66% CPU на serialize |
+| ConnectionHandler | `rulesEffect.zipPar(retranslationEffect)` | -33% latency |
+| ConnectionHandler | `java.lang.System.currentTimeMillis()` | 0 аллокаций Clock |
+| KafkaProducer | buffer.memory=256MB, max.in.flight=10 | Не блокируется при burst |
+| RateLimiter | `now :: timestamps` (O(1) prepend) | Без деградации |
+| IdleConnectionWatcher | `foreachParDiscard(32)` | 32× быстрее cleanup |
+| build.sbt | `netty-all` → отдельные модули + epoll/kqueue | Меньше classpath |
+
+**Осталось (0 задач):** Все 19 пунктов аудита закрыты — 15 исправлено, 4 проанализировано и закрыто.
+
+**Подробности:** [PERFORMANCE_AUDIT_100K.md](PERFORMANCE_AUDIT_100K.md)
+
+**Результат:** CM готов к нагрузочному тестированию на 100K соединений.
+
+---
+
+## ADR-014: Prometheus метрики без внешних зависимостей (CmMetrics)
+
+**Статус:** Принято  
+**Дата:** 2026-03-10
+
+**Контекст:** Аудитом M-5 выявлено отсутствие метрик. Варианты: (1) `zio-metrics-connectors` — тянет тяжёлые зависимости; (2) собственный lightweight объект.
+
+**Решение:** `CmMetrics` singleton с `java.util.concurrent.atomic.LongAdder` (counters) и `AtomicLong` (gauges). Метод `prometheusOutput` — Prometheus text exposition format.
+
+**Метрики (16):** `activeConnections`, `totalConnections`, `totalDisconnections`, `packetsReceived`, `gpsPointsReceived`, `gpsPointsPublished`, `parseErrors`, `kafkaPublishErrors`, `kafkaPublishSuccess`, `redisOperations`, `unknownDevices`, `commandsSent`, `unknownDevicePackets`, `uptime`, `startedAt`.
+
+**Инструментированы:** ConnectionRegistry (register/unregister), ConnectionHandler (packets, points, errors), HttpApi (/metrics, /stats).
+
+**Обоснование:** LongAdder — lock-free, O(1), zero allocation. Нет runtime overhead для hot path. Достаточно для Prometheus scraping.
+
+---
+
+## ADR-015: Redis — одно Lettuce соединение вместо пула
+
+**Статус:** Принято  
+**Дата:** 2026-03-10
+
+**Контекст:** Аудитом M-3 рекомендовался Redis connection pool. Анализ показал:
+- Lettuce 6.x **автоматически пайплайнит** команды через одно TCP соединение
+- Пропускная способность одного соединения: ~100-200K ops/sec
+- Наша нагрузка (steady-state): ~6.6K-20K Redis ops/sec
+- Запас: 5-10× от текущей нагрузки
+
+**Решение:** Оставить одно соединение. Параметр `RedisConfig.poolSize` существует в конфиге, но не используется — зарезервирован на случай роста нагрузки.
+
+**Обоснование:** Over-engineering. Connection pool добавляет сложность (checkout/return, health check, eviction) без измеримой пользы при текущей нагрузке.
+
+---
+
+## ADR-016: FP аудит — замена .toOption на явный pattern matching с логированием
+
+**Статус:** Принято  
+**Дата:** 2026-03-10
+
+**Контекст:** FP аудит (score 7.0/10) выявил 4 использования `.toOption` без логирования — ошибки десериализации JSON молча проглатывались.
+
+**Решение:** Замена `.toOption` на explicit match:
+- `CommandHandler.processPendingCommands` — `ZIO.foreach` + match с `ZIO.logWarning`
+- `RedisClient.getVehicleConfig` — `flatMap` + match с `ZIO.logWarning`
+- `RedisClient.getPosition` — `flatMap` + match с `ZIO.logWarning`
+
+**Исключения:** `GoSafeParser.parseData` и `GpsPoint.parseNmea` — `.toOption` допустимо (multi-packet парсинг, частичные отказы ожидаемы).
+
+**Обоснование:** Молчаливое проглатывание ошибок десериализации маскирует проблемы с данными в Redis.

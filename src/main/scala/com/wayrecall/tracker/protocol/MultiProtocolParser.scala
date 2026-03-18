@@ -72,6 +72,7 @@ object MultiProtocolParser:
     ParserEntry(Protocol.TK102, TK102Parser.tk102),
     ParserEntry(Protocol.TK103, TK102Parser.tk103),
     ParserEntry(Protocol.Arnavi, ArnaviParser),
+    ParserEntry(Protocol.Neomatica, NeomaticaParser),
     ParserEntry(Protocol.Gtlt, GtltParser),
     // Wialon последний — у него наименее уникальные magic bytes
     ParserEntry(Protocol.Wialon, WialonAdapterParser)

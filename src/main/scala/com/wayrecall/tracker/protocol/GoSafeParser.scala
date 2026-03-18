@@ -127,9 +127,9 @@ object GoSafeParser extends ProtocolParser:
       val lon = parts(4).toDouble
       val ew = if parts.length > 5 then parts(5) else "E"
       val speedKnots = if parts.length > 6 then parts(6).toDouble else 0.0
-      val course = if parts.length > 7 then parts(7).toDouble.toInt else 0
-      val altitude = if parts.length > 8 then parts(8).toDouble.toInt else 0
-      val satellites = if parts.length > 9 then parts(9).toDouble.toInt else 0
+      val course = if parts.length > 7 then parts(7).toDoubleOption.getOrElse(0.0).toInt else 0
+      val altitude = if parts.length > 8 then parts(8).toDoubleOption.getOrElse(0.0).toInt else 0
+      val satellites = if parts.length > 9 then parts(9).toDoubleOption.getOrElse(0.0).toInt else 0
       
       val latitude = if ns == "S" then -lat else lat
       val longitude = if ew == "W" then -lon else lon
@@ -165,9 +165,9 @@ object GoSafeParser extends ProtocolParser:
       // parts(0) = fixStatus (1=valid)
       val latStr = parts(1) // N55.753215 или S55.753215
       val lonStr = parts(2) // E037.621356 или W037.621356
-      val altitude = parts(3).toDouble.toInt
+      val altitude = parts(3).toDoubleOption.getOrElse(0.0).toInt
       val speedKnots = parts(4).toDouble
-      val course = parts(5).toDouble.toInt
+      val course = parts(5).toDoubleOption.getOrElse(0.0).toInt
       val time = parts(6)     // HHMMSS
       val date = if parts.length > 7 then parts(7) else "" // DDMMYY
       

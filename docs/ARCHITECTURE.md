@@ -1,6 +1,6 @@
-# Connection Manager — Архитектура v4.0
+# Connection Manager — Архитектура v6.0
 
-> Тег: `АКТУАЛЬНО` | Обновлён: `2026-03-01` | Версия: `4.0`
+> Тег: `АКТУАЛЬНО` | Обновлён: `2026-03-11` | Версия: `6.0`
 
 ## Обзор
 
@@ -9,7 +9,19 @@ Connection Manager — микросервис приёма и первичной
 Поддерживает 18 GPS-протоколов, 10 типов команд для трекеров,
 5 Kafka-топиков для маршрутизации GPS-данных.
 
-## Ключевые метрики v4.0
+**Оптимизирован для 100K+ одновременных TCP-соединений** (v5.0):
+- Epoll/KQueue native transport (O(1) per event вместо O(n) NIO)
+- ConcurrentHashMap + AtomicLong в ConnectionRegistry (0 аллокаций на hot path)
+- Async fork + Semaphore в ConnectionHandler (Netty I/O thread никогда не блокируется)
+- Кэш JSON сериализации (1× вместо 3× per GPS point)
+
+**Новое в v6.0:**
+- **CmMetrics** — 16 метрик (LongAdder + AtomicLong), Prometheus text exposition через `/api/metrics`
+- **ФП-аудит фиксы** — `.toOption` → явный match + `ZIO.logWarning` (CommandHandler, RedisClient)
+- **Безопасный парсинг** — `.toDoubleOption.getOrElse(0.0)` вместо `.toDouble.toInt` (ArnaviParser, GtltParser, GoSafeParser)
+- **Clock.currentTime** в getIdleConnections вместо System.currentTimeMillis (TestClock совместимость)
+
+## Ключевые метрики v6.0
 
 | Компонент | Описание |
 |---|---|
@@ -17,6 +29,8 @@ Connection Manager — микросервис приёма и первичной
 | **10 типов команд** | Reboot, SetInterval, RequestPosition, SetOutput, SetParameter, Password, DeviceConfig, ChangeServer, Custom |
 | **5 энкодеров** | Teltonika (Codec 12), NavTelecom (NTCB FLEX), DTM (binary), Ruptela (binary), Wialon (text) |
 | **5 GPS-топиков** | gps-events, gps-events-rules, gps-events-retranslation, gps-parse-errors, unknown-gps-events |
+| **16 CmMetrics** | activeConnections, totalConnections, packetsReceived, gpsPointsReceived, gpsPointsPublished, parseErrors, kafkaPublishSuccess, kafkaPublishErrors, redisOperations, unknownDevices, commandsSent, unknownDevicePackets, uptime |
+| **560 тестов** | 0 failures, полный regression |
 
 ## Общая архитектура
 
@@ -36,9 +50,9 @@ flowchart TB
     end
 
     subgraph "Handler Layer"
-        CH["ConnectionHandler<br/>(per connection)"]
+        CH["ConnectionHandler<br/>(per connection, fork + Semaphore)"]
         CS["ConnectionState<br/>(in-memory ZIO Ref)"]
-        CR["ConnectionRegistry<br/>(Ref[Map])"]
+        CR["ConnectionRegistry<br/>(ConcurrentHashMap + AtomicLong)"]
     end
 
     subgraph "Processing Layer — ZIO Effects"
@@ -365,13 +379,13 @@ flowchart TB
     end
 ```
 
-## Структура файлов v4.0
+## Структура файлов v6.0
 
 ```
 src/main/scala/com/wayrecall/tracker/
 ├── Main.scala                          # Точка входа, ZIO Layers
 ├── api/
-│   └── HttpApi.scala                   # HTTP API (20+ endpoints)
+│   └── HttpApi.scala                   # HTTP API (20+ endpoints) + CmMetrics output
 ├── command/                            # ★ NEW v4.0 — Command Encoders
 │   ├── CommandEncoder.scala            # Базовый trait + factory + ReceiveOnlyEncoder
 │   ├── TeltonikaEncoder.scala          # Codec 12 (TCP text commands)
@@ -395,11 +409,16 @@ src/main/scala/com/wayrecall/tracker/
 │   └── StationaryFilter.scala          # Фильтр стоянок
 ├── network/
 │   ├── ConnectionHandler.scala         # Netty handler + GpsProcessingService
-│   │                                   # ★ UPDATED v4.0: ALL points → gps-events
-│   ├── ConnectionRegistry.scala        # Реестр активных соединений
+│   │                                   # ★ v5.0: fork + Semaphore, zipPar Kafka, JSON cache
+│   │                                   # ★ v6.0: CmMetrics instrumentation
+│   ├── ConnectionRegistry.scala        # ConcurrentHashMap + AtomicLong (lock-free)
+│   │                                   # ★ v5.0+v6.0: Clock.currentTime в getIdleConnections
+│   ├── IdleConnectionWatcher.scala     # Фоновый fiber, параллельный disconnect (32)
+│   ├── RateLimiter.scala               # Token Bucket (O(1) prepend)
 │   ├── CommandService.scala            # Отправка команд (Redis Pub/Sub)
 │   │                                   # ★ UPDATED v4.0: AwaitingCommand
-│   └── TcpServer.scala                 # Netty bootstrap TCP сервер
+│   └── TcpServer.scala                 # Netty bootstrap: Epoll/KQueue + socket tuning
+│                                       # ★ REWRITTEN v5.0: SO_RCVBUF=4K, WaterMark, Pooled
 ├── protocol/                           # 18 протоколов
 │   ├── ProtocolParser.scala            # Общий trait парсера
 │   ├── TeltonikaParser.scala           # Teltonika Codec 8/8E
@@ -420,7 +439,11 @@ src/main/scala/com/wayrecall/tracker/
 │   ├── GtltParser.scala                # Queclink GTLT
 │   ├── MicroMayakParser.scala          # МикроМаяк
 │   └── MultiProtocolParser.scala       # AutoDetect парсер
+├── service/                            # ★ NEW v6.0
+│   └── CmMetrics.scala                 # 16 метрик: LongAdder + AtomicLong, Prometheus output
 └── storage/
-    ├── KafkaProducer.scala             # 10 publish-методов
-    └── RedisClient.scala               # Lettuce Redis операции
+    ├── KafkaProducer.scala             # 10 publish-методов, buffer.memory=256MB
+    │                                   # ★ v5.0: buildProducerProps, max.in.flight=10
+    └── RedisClient.scala               # Lettuce Redis операции (async fork)
+                                        # ★ v6.0: .toOption → explicit match + logWarning
 ```

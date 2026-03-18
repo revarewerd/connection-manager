@@ -8,6 +8,7 @@ import zio.json.*
 import com.wayrecall.tracker.config.*
 import com.wayrecall.tracker.network.*
 import com.wayrecall.tracker.domain.*
+import com.wayrecall.tracker.service.CmMetrics
 import com.wayrecall.tracker.protocol.ProtocolParser
 import io.netty.channel.ChannelHandlerContext
 import java.time.Instant
@@ -33,6 +34,7 @@ object HttpApiSpec extends ZIOSpecDefault:
   private class MockConnectionRegistry(countRef: Ref[Int]) extends ConnectionRegistry:
     def register(imei: String, ctx: ChannelHandlerContext, parser: ProtocolParser): UIO[Unit] = ZIO.unit
     def unregister(imei: String): UIO[Unit] = ZIO.unit
+    def unregisterIfSame(imei: String, ctx: ChannelHandlerContext): UIO[Unit] = ZIO.unit
     def findByImei(imei: String): UIO[Option[ConnectionEntry]] = ZIO.none
     def getAllConnections: UIO[List[ConnectionEntry]] = ZIO.succeed(Nil)
     def connectionCount: UIO[Int] = countRef.get
@@ -204,6 +206,7 @@ object HttpApiSpec extends ZIOSpecDefault:
 
       test("GET /api/metrics → 200 text/plain с Prometheus метриками") {
         for
+          _ <- ZIO.succeed(CmMetrics.activeConnections.set(5))
           response <- callRoute(Method.GET, "/api/metrics")
           body <- bodyAsString(response)
         yield assertTrue(
@@ -215,6 +218,7 @@ object HttpApiSpec extends ZIOSpecDefault:
 
       test("GET /api/stats → 200 с JSON статистикой") {
         for
+          _ <- ZIO.succeed(CmMetrics.activeConnections.set(5))
           response <- callRoute(Method.GET, "/api/stats")
           body <- bodyAsString(response)
         yield assertTrue(

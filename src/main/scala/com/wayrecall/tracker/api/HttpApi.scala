@@ -6,6 +6,7 @@ import zio.json.*
 import com.wayrecall.tracker.config.{AppConfig, DynamicConfigService, FilterConfig}
 import com.wayrecall.tracker.network.{ConnectionRegistry, CommandService}
 import com.wayrecall.tracker.domain.*
+import com.wayrecall.tracker.service.CmMetrics
 import java.time.Instant
 
 /**
@@ -165,27 +166,11 @@ object HttpApi:
       
       // Prometheus-совместимые метрики (text/plain exposition format)
       Method.GET / "api" / "metrics" -> handler {
-        for
-          connCount <- ConnectionRegistry.connectionCount
-          now = java.lang.System.currentTimeMillis()
-          uptimeSeconds = (now - startedAt) / 1000
-          metrics = s"""# HELP cm_connections_active Количество активных TCP соединений
-# TYPE cm_connections_active gauge
-cm_connections_active $connCount
-
-# HELP cm_uptime_seconds Время работы сервиса в секундах
-# TYPE cm_uptime_seconds gauge
-cm_uptime_seconds $uptimeSeconds
-
-# HELP cm_started_at_timestamp Время запуска сервиса (unix ms)
-# TYPE cm_started_at_timestamp gauge
-cm_started_at_timestamp $startedAt
-"""
-        yield Response(
+        ZIO.succeed(Response(
           status = Status.Ok,
           headers = Headers(Header.ContentType(MediaType.text.plain)),
-          body = Body.fromString(metrics)
-        )
+          body = Body.fromString(CmMetrics.prometheusOutput)
+        ))
       },
       
       // Детальная статистика
@@ -195,9 +180,9 @@ cm_started_at_timestamp $startedAt
           now = java.lang.System.currentTimeMillis()
           response = StatsResponse(
             totalConnections = connCount,
-            totalPacketsReceived = 0L,   // TODO: добавить счётчики через Ref[Long]
-            totalPointsFiltered = 0L,
-            totalPointsPublished = 0L,
+            totalPacketsReceived = CmMetrics.packetsReceived.sum(),
+            totalPointsFiltered = CmMetrics.gpsPointsReceived.sum() - CmMetrics.gpsPointsPublished.sum(),
+            totalPointsPublished = CmMetrics.gpsPointsPublished.sum(),
             uptimeSeconds = (now - startedAt) / 1000
           )
         yield Response.json(response.toJson)
@@ -381,6 +366,14 @@ cm_started_at_timestamp $startedAt
             ParserInfoResponse("skysim", tcp.skysim.port, tcp.skysim.enabled, protocolCounts.getOrElse("skysim", 0)),
             ParserInfoResponse("autophone-mayak", tcp.autophoneMayak.port, tcp.autophoneMayak.enabled, protocolCounts.getOrElse("autophone-mayak", 0)),
             ParserInfoResponse("dtm", tcp.dtm.port, tcp.dtm.enabled, protocolCounts.getOrElse("dtm", 0)),
+            ParserInfoResponse("galileosky", tcp.galileosky.port, tcp.galileosky.enabled, protocolCounts.getOrElse("galileosky", 0)),
+            ParserInfoResponse("concox", tcp.concox.port, tcp.concox.enabled, protocolCounts.getOrElse("concox", 0)),
+            ParserInfoResponse("tk102", tcp.tk102.port, tcp.tk102.enabled, protocolCounts.getOrElse("tk102", 0)),
+            ParserInfoResponse("tk103", tcp.tk103.port, tcp.tk103.enabled, protocolCounts.getOrElse("tk103", 0)),
+            ParserInfoResponse("arnavi", tcp.arnavi.port, tcp.arnavi.enabled, protocolCounts.getOrElse("arnavi", 0)),
+            ParserInfoResponse("adm", tcp.adm.port, tcp.adm.enabled, protocolCounts.getOrElse("adm", 0)),
+            ParserInfoResponse("gtlt", tcp.gtlt.port, tcp.gtlt.enabled, protocolCounts.getOrElse("gtlt", 0)),
+            ParserInfoResponse("micro-mayak", tcp.microMayak.port, tcp.microMayak.enabled, protocolCounts.getOrElse("micro-mayak", 0)),
             ParserInfoResponse("multi", tcp.multi.port, tcp.multi.enabled, protocolCounts.getOrElse("multi", 0))
           )
         yield Response.json(parsers.toJson)

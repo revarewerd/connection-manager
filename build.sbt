@@ -35,8 +35,16 @@ lazy val root = project
       "dev.zio" %% "zio-logging-slf4j" % "2.1.16",
       "dev.zio" %% "zio-json" % "0.6.2",
       
-      // Netty
-      "io.netty" % "netty-all" % nettyVersion,
+      // Netty (модульная сборка вместо netty-all)
+      "io.netty" % "netty-transport" % nettyVersion,
+      "io.netty" % "netty-handler" % nettyVersion,
+      "io.netty" % "netty-codec" % nettyVersion,
+      "io.netty" % "netty-buffer" % nettyVersion,
+      "io.netty" % "netty-common" % nettyVersion,
+      // Нативные транспорты: Epoll для Linux, KQueue для macOS
+      "io.netty" % "netty-transport-native-epoll" % nettyVersion classifier "linux-x86_64",
+      "io.netty" % "netty-transport-native-kqueue" % nettyVersion classifier "osx-x86_64",
+      "io.netty" % "netty-transport-native-kqueue" % nettyVersion classifier "osx-aarch_64",
       
       // Redis (Lettuce)
       "io.lettuce" % "lettuce-core" % "6.3.2.RELEASE",

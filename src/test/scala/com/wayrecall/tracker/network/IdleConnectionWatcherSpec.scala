@@ -7,6 +7,7 @@ import com.wayrecall.tracker.domain.*
 import com.wayrecall.tracker.config.{TcpConfig, TcpProtocolConfig, MultiProtocolPortConfig, FilterConfig}
 import com.wayrecall.tracker.config.DynamicConfigService
 import com.wayrecall.tracker.storage.{RedisClient, KafkaProducer}
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Тесты для IdleConnectionWatcher
@@ -108,7 +109,7 @@ object IdleConnectionWatcherSpec extends ZIOSpecDefault:
       
       test("возвращает 0 для пустого реестра") {
         for
-          registry <- Ref.make(Map.empty[String, ConnectionEntry]).map(ConnectionRegistry.Live(_))
+          registry <- ZIO.succeed(ConnectionRegistry.Live(new ConcurrentHashMap[String, MutableConnectionEntry]()))
           config   <- makeMockConfigService
           (kafka, _) <- makeMockKafkaProducer
           redis    <- makeMockRedis
@@ -122,7 +123,7 @@ object IdleConnectionWatcherSpec extends ZIOSpecDefault:
         // idleTimeoutSeconds = 300 (5 минут) в testTcpConfig
         // Если соединение было 6 минут назад → должно быть idle
         for
-          registry <- Ref.make(Map.empty[String, ConnectionEntry]).map(ConnectionRegistry.Live(_))
+          registry <- ZIO.succeed(ConnectionRegistry.Live(new ConcurrentHashMap[String, MutableConnectionEntry]()))
           config   <- makeMockConfigService
           (kafka, statusRef) <- makeMockKafkaProducer
           redis    <- makeMockRedis
@@ -141,7 +142,7 @@ object IdleConnectionWatcherSpec extends ZIOSpecDefault:
       
       test("не трогает активные соединения") {
         for
-          registry <- Ref.make(Map.empty[String, ConnectionEntry]).map(ConnectionRegistry.Live(_))
+          registry <- ZIO.succeed(ConnectionRegistry.Live(new ConcurrentHashMap[String, MutableConnectionEntry]()))
           config   <- makeMockConfigService
           (kafka, _) <- makeMockKafkaProducer
           redis    <- makeMockRedis

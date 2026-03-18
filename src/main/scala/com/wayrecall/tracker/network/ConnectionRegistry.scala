@@ -4,11 +4,16 @@ import zio.*
 import io.netty.channel.ChannelHandlerContext
 import com.wayrecall.tracker.protocol.ProtocolParser
 import com.wayrecall.tracker.domain.GpsRawPoint
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
+import scala.jdk.CollectionConverters.*
+import com.wayrecall.tracker.service.CmMetrics
 
 /**
  * Реестр активных TCP соединений
  * 
- * ✅ Чисто функциональный: использует ZIO Ref вместо ConcurrentHashMap
+ * ✅ ConcurrentHashMap + AtomicLong для lock-free операций на горячем пути
+ * ✅ updateLastActivity = 0 аллокаций (AtomicLong.set вместо Ref.modify + Map copy)
  * 
  * Позволяет:
  * - Находить соединение по IMEI для отправки команд
@@ -17,48 +22,39 @@ import com.wayrecall.tracker.domain.GpsRawPoint
  * - Отслеживать время последней активности (для idle timeout)
  */
 trait ConnectionRegistry:
-  /**
-   * Регистрирует новое соединение
-   */
   def register(imei: String, ctx: ChannelHandlerContext, parser: ProtocolParser): UIO[Unit]
-  
-  /**
-   * Удаляет соединение
-   */
   def unregister(imei: String): UIO[Unit]
-  
-  /**
-   * Находит контекст соединения по IMEI
-   */
+  def unregisterIfSame(imei: String, ctx: ChannelHandlerContext): UIO[Unit]
   def findByImei(imei: String): UIO[Option[ConnectionEntry]]
-  
-  /**
-   * Возвращает все активные соединения
-   */
   def getAllConnections: UIO[List[ConnectionEntry]]
-  
-  /**
-   * Возвращает количество активных соединений
-   */
   def connectionCount: UIO[Int]
-  
-  /**
-   * Проверяет, подключен ли трекер
-   */
   def isConnected(imei: String): UIO[Boolean]
-  
-  /**
-   * Обновляет время последней активности для IMEI
-   */
   def updateLastActivity(imei: String): UIO[Unit]
-  
-  /**
-   * Получает соединения, неактивные дольше указанного времени
-   */
   def getIdleConnections(maxIdleMs: Long): UIO[List[ConnectionEntry]]
 
 /**
- * Информация о соединении - immutable
+ * Mutable запись соединения с AtomicLong для lock-free обновления lastActivityAt
+ */
+final class MutableConnectionEntry(
+    val imei: String,
+    val ctx: ChannelHandlerContext,
+    val parser: ProtocolParser,
+    val connectedAt: Long,
+    val lastActivityAt: AtomicLong,
+    val lastPosition: Option[GpsRawPoint] = None
+):
+  /** Снимок для read-only операций */
+  def toSnapshot: ConnectionEntry = ConnectionEntry(
+    imei = imei,
+    ctx = ctx,
+    parser = parser,
+    connectedAt = connectedAt,
+    lastActivityAt = lastActivityAt.get(),
+    lastPosition = lastPosition
+  )
+
+/**
+ * Immutable снимок соединения — для API и IdleConnectionWatcher
  */
 final case class ConnectionEntry(
     imei: String,
@@ -74,130 +70,134 @@ object ConnectionRegistry:
   // Accessor methods
   def register(imei: String, ctx: ChannelHandlerContext, parser: ProtocolParser): URIO[ConnectionRegistry, Unit] =
     ZIO.serviceWithZIO(_.register(imei, ctx, parser))
-  
   def unregister(imei: String): URIO[ConnectionRegistry, Unit] =
     ZIO.serviceWithZIO(_.unregister(imei))
-  
+  def unregisterIfSame(imei: String, ctx: ChannelHandlerContext): URIO[ConnectionRegistry, Unit] =
+    ZIO.serviceWithZIO(_.unregisterIfSame(imei, ctx))
   def findByImei(imei: String): URIO[ConnectionRegistry, Option[ConnectionEntry]] =
     ZIO.serviceWithZIO(_.findByImei(imei))
-  
   def getAllConnections: URIO[ConnectionRegistry, List[ConnectionEntry]] =
     ZIO.serviceWithZIO(_.getAllConnections)
-  
   def connectionCount: URIO[ConnectionRegistry, Int] =
     ZIO.serviceWithZIO(_.connectionCount)
-  
   def isConnected(imei: String): URIO[ConnectionRegistry, Boolean] =
     ZIO.serviceWithZIO(_.isConnected(imei))
-  
   def updateLastActivity(imei: String): URIO[ConnectionRegistry, Unit] =
     ZIO.serviceWithZIO(_.updateLastActivity(imei))
-  
   def getIdleConnections(maxIdleMs: Long): URIO[ConnectionRegistry, List[ConnectionEntry]] =
     ZIO.serviceWithZIO(_.getIdleConnections(maxIdleMs))
   
   /**
-   * Live реализация с ZIO Ref - чисто функциональная!
+   * Live реализация с ConcurrentHashMap — lock-free для горячего пути
    * 
-   * Использует Ref[Map[String, ConnectionEntry]] для хранения соединений.
-   * Все операции атомарные и thread-safe.
-   * 
-   * ✅ Поддержка reconnect: если трекер переподключается с тем же IMEI,
-   *    старое соединение закрывается, новое регистрируется.
-   *    Это важно, т.к. трекеры часто теряют связь и переподключаются.
+   * ✅ updateLastActivity: AtomicLong.set — 0 аллокаций, O(1), без ZIO overhead
+   * ✅ register/unregister: ConcurrentHashMap.put/remove — O(1), thread-safe
+   * ✅ connectionCount: ConcurrentHashMap.size — O(1)
+   * ✅ Поддержка reconnect: put заменяет старое значение, старое соединение закрывается
    */
   final case class Live(
-      connectionsRef: Ref[Map[String, ConnectionEntry]]
+      connections: ConcurrentHashMap[String, MutableConnectionEntry]
   ) extends ConnectionRegistry:
     
     override def register(imei: String, ctx: ChannelHandlerContext, parser: ProtocolParser): UIO[Unit] =
       for
         now <- Clock.currentTime(java.util.concurrent.TimeUnit.MILLISECONDS)
-        
-        // Создаём новую запись о соединении
-        entry = ConnectionEntry(
+        entry = new MutableConnectionEntry(
           imei = imei,
           ctx = ctx,
           parser = parser,
           connectedAt = now,
-          lastActivityAt = now
+          lastActivityAt = new AtomicLong(now)
         )
-        
-        // Атомарно заменяем и получаем старое значение (если было)
-        oldEntry <- connectionsRef.modify { map =>
-          val old = map.get(imei)
-          (old, map + (imei -> entry))
-        }
-        
-        // Обработка reconnect: закрываем старое соединение если было
+        oldEntry <- ZIO.succeed(Option(connections.put(imei, entry)))
         _ <- ZIO.foreach(oldEntry) { old =>
           for
             _ <- ZIO.logWarning(s"[REGISTRY] ⚠ Обнаружен reconnect для IMEI=$imei, закрываем старое соединение")
-            _ <- ZIO.logDebug(s"[REGISTRY] Старое соединение было установлено в ${old.connectedAt}, последняя активность ${old.lastActivityAt}")
+            _ <- ZIO.logDebug(s"[REGISTRY] Старое соединение было установлено в ${old.connectedAt}, последняя активность ${old.lastActivityAt.get()}")
             _ <- ZIO.attempt(old.ctx.close()).ignore
           yield ()
         }
-        
-        count <- connectionsRef.get.map(_.size)
+        count = connections.size()
+        _ <- ZIO.succeed {
+          CmMetrics.totalConnections.increment()
+          CmMetrics.activeConnections.set(count.toLong)
+        }
         _ <- ZIO.logInfo(s"[REGISTRY] ✓ Соединение зарегистрировано: IMEI=$imei, всего активных: $count")
       yield ()
     
     override def unregister(imei: String): UIO[Unit] =
       for
-        removed <- connectionsRef.modify { map =>
-          (map.contains(imei), map - imei)
+        removed <- ZIO.succeed(Option(connections.remove(imei)).isDefined)
+        count = connections.size()
+        _ <- ZIO.succeed {
+          if removed then
+            CmMetrics.totalDisconnections.increment()
+            CmMetrics.activeConnections.set(count.toLong)
         }
-        count <- connectionsRef.get.map(_.size)
         _ <- if removed then
           ZIO.logInfo(s"[REGISTRY] ✗ Соединение удалено: IMEI=$imei, всего активных: $count")
         else
           ZIO.logDebug(s"[REGISTRY] Попытка удалить несуществующее соединение: IMEI=$imei")
       yield ()
     
+    override def unregisterIfSame(imei: String, expectedCtx: ChannelHandlerContext): UIO[Unit] =
+      for
+        removed <- ZIO.succeed {
+          // ConcurrentHashMap.compute — атомарная операция
+          var wasRemoved = false
+          connections.compute(imei, (_, existing) =>
+            if existing != null && (existing.ctx eq expectedCtx) then
+              wasRemoved = true
+              null  // удаляет запись
+            else
+              existing  // оставляет как есть
+          )
+          wasRemoved
+        }
+        count = connections.size()
+        _ <- ZIO.succeed {
+          if removed then
+            CmMetrics.totalDisconnections.increment()
+            CmMetrics.activeConnections.set(count.toLong)
+        }
+        _ <- if removed then
+          ZIO.logInfo(s"[REGISTRY] ✗ Соединение удалено (safe): IMEI=$imei, всего активных: $count")
+        else
+          ZIO.logDebug(s"[REGISTRY] Пропущен unregister для IMEI=$imei — соединение уже заменено (reconnect)")
+      yield ()
+    
     override def findByImei(imei: String): UIO[Option[ConnectionEntry]] =
-      connectionsRef.get.map(_.get(imei))
+      ZIO.succeed(Option(connections.get(imei)).map(_.toSnapshot))
     
     override def getAllConnections: UIO[List[ConnectionEntry]] =
-      connectionsRef.get.map(_.values.toList)
+      ZIO.succeed(connections.values().asScala.map(_.toSnapshot).toList)
     
     override def connectionCount: UIO[Int] =
-      connectionsRef.get.map(_.size)
+      ZIO.succeed(connections.size())
     
     override def isConnected(imei: String): UIO[Boolean] =
-      connectionsRef.get.map(_.contains(imei))
+      ZIO.succeed(connections.containsKey(imei))
     
+    // Lock-free обновление lastActivityAt — 0 аллокаций, вызывается на каждый GPS пакет
     override def updateLastActivity(imei: String): UIO[Unit] =
-      for
-        now <- Clock.currentTime(java.util.concurrent.TimeUnit.MILLISECONDS)
-        updated <- connectionsRef.modify { connections =>
-          connections.get(imei) match
-            case Some(entry) => 
-              (true, connections + (imei -> entry.copy(lastActivityAt = now)))
-            case None => 
-              (false, connections)
-        }
-        // Логируем только если соединение не найдено (это странно)
-        _ <- ZIO.when(!updated) {
-          ZIO.logWarning(s"[REGISTRY] Попытка обновить активность несуществующего соединения: IMEI=$imei")
-        }
-      yield ()
+      ZIO.succeed {
+        val entry = connections.get(imei)
+        if entry != null then entry.lastActivityAt.set(java.lang.System.currentTimeMillis())
+      }
     
     override def getIdleConnections(maxIdleMs: Long): UIO[List[ConnectionEntry]] =
       for
         now <- Clock.currentTime(java.util.concurrent.TimeUnit.MILLISECONDS)
-        connections <- connectionsRef.get
-        idleConnections = connections.values.filter { entry =>
-          now - entry.lastActivityAt > maxIdleMs
-        }.toList
-        _ <- ZIO.when(idleConnections.nonEmpty) {
-          ZIO.logDebug(s"[REGISTRY] Найдено ${idleConnections.size} неактивных соединений (idle > ${maxIdleMs}мс)")
+        idle <- ZIO.succeed {
+          connections.values().asScala.filter { entry =>
+            now - entry.lastActivityAt.get() > maxIdleMs
+          }.map(_.toSnapshot).toList
         }
-      yield idleConnections
+        _ <- ZIO.when(idle.nonEmpty) {
+          ZIO.logDebug(s"[REGISTRY] Найдено ${idle.size} неактивных соединений (idle > ${maxIdleMs}мс)")
+        }
+      yield idle
   
-  /**
-   * ZIO Layer - чисто функциональный, использует Ref
-   */
   val live: ULayer[ConnectionRegistry] =
-    ZLayer {
-      Ref.make(Map.empty[String, ConnectionEntry]).map(Live(_))
-    }
+    ZLayer.succeed(Live(new ConcurrentHashMap[String, MutableConnectionEntry](16384, 0.75f, 64)))
+

@@ -4,6 +4,26 @@
 
 > Полное описание всех топиков → [infra/kafka/TOPICS.md](../../../infra/kafka/TOPICS.md)
 
+## Учебные пометки в этом документе
+
+Если у тебя вопрос по конкретному месту, оставляй HTML-комментарий прямо рядом с абзацем:
+
+<!-- QUESTION(U): почему именно такой partition key? -->
+<!-- WHY(U): зачем дублируем событие в rules/retranslation? -->
+<!-- CONFUSED(U): не понимаю когда идет publish в unknown-gps-events -->
+<!-- TRACE(U): разложи путь сообщения от parser до топика -->
+<!-- ANSWER(AI): partition key = vehicleId/imei нужен для стабильного порядка событий одного устройства в пределах партиции. -->
+<!-- ANSWER(AI): дублирование в rules/retranslation не технический дубль, а целевая маршрутизация в разные доменные консьюмеры с разной нагрузкой и SLA. -->
+<!-- ANSWER(AI): unknown-gps-events используется, когда устройство не распознано/не зарегистрировано в контексте и точка не может идти в обычный валидированный поток. -->
+<!-- WALKTHROUGH(AI): parser.parseData -> при ошибке gps-parse-errors; при успехе DeadReckoning -> Stationary -> всегда gps-events; дополнительно при флагах устройства в deviceData: gps-events-rules и/или gps-events-retranslation; при unknown-устройстве путь идет в unknown-gps-events. -->
+<!-- NEXTSTEP(AI): проверь в логах и тестах ConnectionHandler ветки publish для isValid/isMoving и unknown-device сценарий. -->
+
+Я буду отвечать рядом:
+
+<!-- ANSWER(AI): короткий ответ по месту -->
+<!-- WALKTHROUGH(AI): пошаговый разбор потока -->
+<!-- NEXTSTEP(AI): что проверить локально -->
+
 ## Общая схема маршрутизации
 
 ```mermaid

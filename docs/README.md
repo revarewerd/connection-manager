@@ -1,6 +1,6 @@
-# Connection Manager (CM) v4.0
+# Connection Manager (CM) v6.0
 
-> Тег: `АКТУАЛЬНО` | Обновлён: `2026-03-01` | Версия: `4.0`
+> Тег: `АКТУАЛЬНО` | Обновлён: `2026-03-11` | Версия: `6.0`
 
 ## Описание
 
@@ -9,15 +9,28 @@ Connection Manager — центральный TCP-сервис системы Wa
 парсит их протокол-специфичными парсерами, фильтрует аномалии и публикует
 GPS-события в Kafka. Поддерживает отправку команд на трекеры через 5 энкодеров.
 
-**Ключевые характеристики v4.0:**
+**Оптимизирован для 100K+ одновременных TCP-соединений** (v5.0).  
+**CmMetrics: встроенные Prometheus-метрики** (v6.0). **560 тестов, 0 failures.**
+
+**Ключевые характеристики:**
 - **18 GPS-протоколов** — Teltonika, Wialon (3 варианта), Ruptela, NavTelecom, GoSafe, SkySim, AutophoneMayak, DTM, Galileosky, Concox GT06, TK102/103, Arnavi, ADM, Queclink GTLT, МикроМаяк
 - **10 типов команд** — Reboot, SetInterval, RequestPosition, SetOutput, SetParameter, Password, DeviceConfig, ChangeServer, Custom
 - **5 Command Encoders** — Teltonika (Codec 12), NavTelecom (NTCB FLEX), DTM (binary), Ruptela (binary 0x65-0x67), Wialon (text #M#)
 - **MultiProtocolParser** — автодетект протокола по magic bytes первого пакета
 - **In-memory кэш** вместо Redis на горячем пути (~864M → ~10K Redis ops/day)
-- **10 Kafka-топиков** — включая gps-parse-errors (NEW) для мониторинга
-- **ВСЕ точки → gps-events** — валидные, отфильтрованные, стоянки (с маркерами isValid/isMoving)
-- **HTTP API** (порт 10090) с 20+ эндпоинтами: health, K8s probes, Prometheus metrics, управление
+
+### Оптимизации v5.0 → v6.0
+
+| Было (v4.0) | Стало (v5.0) | Добавлено (v6.0) |
+|---|---|---|
+| `runtime.unsafe.run()` блокировал Netty I/O | `runtime.unsafe.fork()` + `Semaphore(1)` — 0 блокировок | — |
+| `Ref[Map]` (ConnectionRegistry) | `ConcurrentHashMap` + `AtomicLong` — lock-free | — |
+| NIO (O(n) per event) | Epoll/KQueue (O(1) per event) | — |
+| 3× JSON serialize per GPS point | 1× JSON cache → 3 топика | — |
+| Последовательный Kafka publish | `zipPar` — параллельный publish | — |
+| Нет метрик (только логи) | — | **CmMetrics** — 16 LongAdder/AtomicLong метрик, Prometheus формат |
+| `.toOption` без логирования | — | Явный pattern matching + `ZIO.logWarning` для невалидных данных |
+| `.toDouble.toInt` crash на невалидных данных | — | `.toDoubleOption.getOrElse(0.0)` — безопасный парсинг |
 
 ## Быстрый старт
 
@@ -87,9 +100,14 @@ curl http://localhost:10090/api/connections
 | [PROTOCOLS.md](PROTOCOLS.md) | Все 18 GPS-протоколов: форматы, парсинг, команды |
 | [DATA_MODEL.md](DATA_MODEL.md) | Redis ключи, Kafka сообщения, доменные модели |
 | [KAFKA.md](KAFKA.md) | 10 produce + 2 consume топиков, маршрутизация |
-| [DECISIONS.md](DECISIONS.md) | 11 ADR — принятые решения v4.0 |
-| [RUNBOOK.md](RUNBOOK.md) | Запуск, дебаг, типичные ошибки |
+| [DECISIONS.md](DECISIONS.md) | 16 ADR — принятые решения v5.0-v6.0 (вкл. CmMetrics, FP аудит) |
+| [RUNBOOK.md](RUNBOOK.md) | Запуск, дебаг, типичные ошибки, тюнинг производительности |
 | [INDEX.md](INDEX.md) | Содержание документации |
+| [LEARNING.md](LEARNING.md) | Подробный гайд по изучению сервиса |
+| [PERFORMANCE_AUDIT_100K.md](PERFORMANCE_AUDIT_100K.md) | Аудит производительности: 19 находок, **все 19 закрыты** |
+| [FP_AUDIT_REPORT.md](FP_AUDIT_REPORT.md) | ФП-аудит: балл 7.0/10, ключевые фиксы .toOption и парсеры |
+| [SCALABILITY_ISSUES.md](SCALABILITY_ISSUES.md) | История масштабирования 20K → 100K |
+| [LEGACY_VS_NEW_COMPARISON.md](LEGACY_VS_NEW_COMPARISON.md) | Сравнение Legacy STELS vs CM v5.0 |
 
 ## Зависимости
 

@@ -6,6 +6,7 @@ import zio.test.Assertion.*
 import zio.json.*
 import com.wayrecall.tracker.domain.*
 import com.wayrecall.tracker.storage.{RedisClient, KafkaProducer}
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Тесты для CommandService
@@ -58,7 +59,7 @@ object CommandServiceSpec extends ZIOSpecDefault:
    * In-memory ConnectionRegistry мок
    */
   private def makeRegistry: UIO[ConnectionRegistry] =
-    Ref.make(Map.empty[String, ConnectionEntry]).map(ConnectionRegistry.Live(_))
+    ZIO.succeed(ConnectionRegistry.Live(new ConcurrentHashMap[String, MutableConnectionEntry]()))
   
   private def makeMockRedis: UIO[MockRedisClient] =
     for

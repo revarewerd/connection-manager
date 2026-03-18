@@ -1,8 +1,27 @@
-> Тег: `АКТУАЛЬНО` | Обновлён: `2026-03-02` | Версия: `1.0`
+> Тег: `АКТУАЛЬНО` | Обновлён: `2026-03-11` | Версия: `3.0`
 
 # 📖 Изучение Connection Manager
 
 > Это руководство поможет разобраться в устройстве Connection Manager — центрального TCP-сервиса приёма GPS-данных.
+
+## Как оставлять вопросы по месту
+
+Пока изучаешь сервис, оставляй вопросы прямо рядом с нужным фрагментом.
+
+Для Markdown используй:
+
+<!-- QUESTION(U): что делает этот этап? -->
+<!-- WHY(U): почему выбрано именно такое решение? -->
+<!-- CONFUSED(U): тут потерял контекст -->
+<!-- TRACE(U): нужен пошаговый путь данных -->
+
+Я отвечаю рядом:
+
+<!-- ANSWER(AI): краткий ответ -->
+<!-- WALKTHROUGH(AI): шаги выполнения -->
+<!-- NEXTSTEP(AI): что проверить в коде или тестах -->
+
+Полный стандарт тегов: docs/LEARNING_COMMENT_STYLE.md
 
 ---
 
@@ -57,6 +76,8 @@
 - Запускает `ServerBootstrap` на указанных портах
 - `ChannelInitializer` → создаёт pipeline: `IdleStateHandler` → `ConnectionHandler`
 - Каждый порт привязан к конкретному протоколу (5001=Teltonika, 5002=Wialon, ...)
+- **v5.0:** Epoll (Linux) / KQueue (macOS) native transport — O(1) per event вместо O(n) NIO
+- **v5.0:** SO_BACKLOG=4096, SO_RCVBUF=4096, SO_SNDBUF=4096, WriteBufferWaterMark(16K,32K), PooledByteBufAllocator
 
 #### `network/ConnectionHandler.scala`
 - **Главный класс** — обрабатывает жизненный цикл TCP соединения
@@ -64,11 +85,18 @@
 - `channelRead` → парсинг буфера через ProtocolParser
 - `channelInactive` → удаление из реестра, обновление статуса в Redis
 - Поддерживает отправку ответов (ACK) и команд обратно в трекер
+- **v5.0:** `runtime.unsafe.fork()` + `Semaphore(1)` per connection — Netty I/O thread **никогда не блокируется**
+- **v5.0:** `rulesEffect.zipPar(retranslationEffect)` — параллельный publish в 3 Kafka-топика
+- **v5.0:** JSON кэш — `msg.toJson` вызывается 1 раз, результат используется для всех 3 топиков
+- **v5.0:** `java.lang.System.currentTimeMillis()` / `java.time.Instant.now()` вместо ZIO Clock (0 аллокаций)
 
 #### `network/ConnectionRegistry.scala`
-- In-memory `ConcurrentHashMap[String, ConnectionInfo]`
-- Хранит: IMEI → канал Netty, протокол, время подключения, последний пакет
+- **v5.0 REWRITTEN:** `ConcurrentHashMap[String, MutableConnectionEntry]` + `AtomicLong` для `lastActivityAt`
+- Lock-free: 0 аллокаций на hot path, O(1) для register/unregister/updateActivity
+- `unregisterIfSame(imei, channel)` — атомарная проверка владельца канала (устраняет race condition)
+- Хранит: IMEI → канал Netty, протокол, время подключения, vehicleId, orgId
 - Используется для: отправки команд, мониторинга, закрытия соединений
+- Бывшая реализация `ZIO Ref[Map]` заменена ради устранения аллокаций при 100K соединениях
 
 #### `network/CommandService.scala`
 - Kafka consumer топика `device-commands`
@@ -79,6 +107,13 @@
 #### `network/RateLimiter.scala`
 - Token Bucket алгоритм для защиты от DDoS
 - Ограничивает количество подключений в секунду и пакетов на IMEI
+- **v5.0:** `now :: validTimestamps` — O(1) prepend вместо O(n) append
+
+#### `network/IdleConnectionWatcher.scala`
+- Фоновый fiber, проверяет каждые N секунд
+- Закрывает соединения без пакетов > N минут
+- Публикует `device-status` в Kafka с статусом OFFLINE
+- **v5.0:** `foreachParDiscard` + `withParallelism(32)` — параллельный disconnect
 
 #### `network/DeviceConfigListener.scala`
 - Redis Pub/Sub: каналы `device-config:*`
@@ -121,6 +156,8 @@
 - `zio-kafka` Producer
 - Партицирование по `deviceId` (гарантирует порядок для одного устройства)
 - Публикует в 8+ топиков (gps-events, device-status, и т.д.)
+- **v5.0:** `buildProducerProps` — дедупликация конфигурации producer
+- **v5.0:** `buffer.memory=256MB`, `max.block.ms=5000`, `max.in.flight.requests=10`
 
 #### `storage/VehicleLookupService.scala`
 - Кэш IMEI → VehicleId
@@ -526,4 +563,80 @@ flowchart TD
 
 ---
 
-*Версия: 1.0 | Обновлён: 2 марта 2026*
+## 13. Оптимизации производительности (v5.0)
+
+CM оптимизирован для **100K+ одновременных TCP-соединений** на одном инстансе.
+
+### Ключевые изменения
+
+| Компонент | Было (v4.0) | Стало (v5.0) | Эффект |
+|-----------|-------------|--------------|--------|
+| ConnectionHandler | `runtime.unsafe.run()` (блокировал Netty I/O thread) | `runtime.unsafe.fork()` + `Semaphore(1)` | I/O thread свободен, 0 блокировок |
+| ConnectionRegistry | `ZIO Ref[Map]` (полная копия на каждый update) | `ConcurrentHashMap` + `AtomicLong` | 0 аллокаций на hot path |
+| TcpServer | NIO (java.nio), дефолтные буферы | Epoll/KQueue + SO_RCVBUF=4K, WaterMark(16K,32K) | O(1) events, контроль памяти |
+| KafkaProducer | Дефолтные настройки, 3× JSON serialize | buffer.memory=256MB, 1× JSON → 3 топика | -66% CPU на сериализацию |
+| RateLimiter | `timestamps :+ now` (O(n)) | `now :: timestamps` (O(1)) | Без деградации при нагрузке |
+| IdleConnectionWatcher | Последовательный disconnect | `foreachParDiscard(32)` | 32× быстрее cleanup |
+| Clock вызовы | `Clock.currentTime(MILLIS)` (ZIO fiber) | `java.lang.System.currentTimeMillis()` | 0 аллокаций |
+| Kafka publish | Последовательный: events → rules → retranslation | `rulesEffect.zipPar(retranslationEffect)` | -33% latency |
+
+### Подробности — см.
+- [PERFORMANCE_AUDIT_100K.md](PERFORMANCE_AUDIT_100K.md) — полный аудит 19 находок (**все 19 закрыты**)
+- [SCALABILITY_ISSUES.md](SCALABILITY_ISSUES.md) — история масштабирования 20K → 100K
+
+---
+
+## 14. CmMetrics — встроенные метрики (v6.0)
+
+CM v6.0 включает глобальный объект `CmMetrics` (service/CmMetrics.scala) для сбора метрик в реальном времени.
+
+### Технология
+- **LongAdder** — lock-free атомарные счётчики (counters), оптимизированы для high-contention
+- **AtomicLong** — gauges (текущие значения)
+- **Prometheus text exposition** — формат вывода через `/api/metrics`
+
+### 16 метрик
+| Метрика | Тип | Откуда обновляется |
+|---------|-----|-------------------|
+| `cm_connections_active` | gauge | ConnectionRegistry.register/unregister |
+| `cm_connections_total` | counter | ConnectionRegistry.register |
+| `cm_disconnections_total` | counter | ConnectionRegistry.unregister |
+| `cm_packets_received_total` | counter | ConnectionHandler.processDataPacket |
+| `cm_gps_points_received_total` | counter | ConnectionHandler.processDataPacket |
+| `cm_gps_points_published_total` | counter | ConnectionHandler (после Kafka) |
+| `cm_parse_errors_total` | counter | ConnectionHandler.publishParseError |
+| `cm_kafka_publish_success_total` | counter | ConnectionHandler |
+| `cm_kafka_publish_errors_total` | counter | ConnectionHandler |
+| `cm_redis_operations_total` | counter | RedisClient |
+| `cm_unknown_devices_total` | counter | ConnectionHandler.onUnknownDevice |
+| `cm_commands_sent_total` | counter | CommandService |
+| `cm_unknown_device_packets_total` | counter | ConnectionHandler |
+| `cm_uptime_seconds` | gauge (computed) | System.currentTimeMillis - startedAt |
+
+### Почему не ZIO Layer
+CmMetrics — глобальный `object` (**не** ZIO Layer). Причина: метрики обновляются из Netty callback (channelActive, channelRead), где нет доступа к ZIO Environment. LongAdder + AtomicLong — lock-free, zero-allocation.
+
+### Тесты
+11 тестов в `CmMetricsSpec` — проверяют корректность счётчиков, Prometheus формат, конкурентность.
+
+---
+
+## 15. ФП-аудит и исправления (v6.0)
+
+### Оценка: 7.0 / 10
+
+Полный отчёт: [FP_AUDIT_REPORT.md](FP_AUDIT_REPORT.md)
+
+### Исправлено в v6.0
+1. **`.toOption` без логирования** — CommandHandler, RedisClient: заменено на явный match + `ZIO.logWarning`
+2. **`.toDouble.toInt` crash** — ArnaviParser, GtltParser, GoSafeParser: заменено на `.toDoubleOption.getOrElse(0.0)`
+3. **`getIdleConnections`** — `System.currentTimeMillis()` заменён на `Clock.currentTime` (совместимость с TestClock)
+
+### Оставлено (допустимо)
+- `throw` в парсерах — обёрнуто в `ZIO.attempt` (безопасно, но не идиоматично)
+- `@volatile var` в парсерах — per-connection, нет race condition
+- `var imei: String = null` в GalileoskyParser — legacy, нужен рефакторинг
+
+---
+
+*Версия: 3.0 | Обновлён: 11 марта 2026*

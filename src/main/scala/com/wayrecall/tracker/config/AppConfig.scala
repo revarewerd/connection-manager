@@ -21,7 +21,8 @@ final case class MultiProtocolPortConfig(
     port: Int,
     enabled: Boolean
 )
-
+// TODO(AI): дай пояснения каждому полю, особенно к тем, которые могут быть неочевидными (keepAlive, tcpNodelay, timeouts, idleTimeout и тд). И почему они важны для производительности и стабильности сервера?
+// TODO(AI): почему тут перечислены все протоколы?
 final case class TcpConfig(
     teltonika: TcpProtocolConfig,
     wialon: TcpProtocolConfig,
@@ -36,6 +37,7 @@ final case class TcpConfig(
     tk102: TcpProtocolConfig,
     tk103: TcpProtocolConfig,
     arnavi: TcpProtocolConfig,
+    neomatica: TcpProtocolConfig,
     adm: TcpProtocolConfig,
     gtlt: TcpProtocolConfig,
     microMayak: TcpProtocolConfig,
@@ -43,7 +45,8 @@ final case class TcpConfig(
     bossThreads: Int,
     workerThreads: Int,
     maxConnections: Int,
-    keepAlive: Boolean,
+    keepAlive: Boolean, //QUESTION(U):как я могу конфигурировать это поле для разных трекеров? Например, для устройств, которые отправляют данные с определенной периодичностью, может быть полезно включить keepAlive, чтобы поддерживать соединение открытым даже при отсутствии данных. А для устройств, которые отправляют данные нерегулярно, может быть лучше отключить keepAlive, чтобы не держать открытыми неактивные соединения?
+    // ANSWER(AI): keepAlive задаётся на порт/протокол, а не на отдельный трекер в рамках одного порта. Практика: держать true для долгоживущих GPS-соединений, а «чистку» неактивных делать через idleTimeout/idleWatcher. Пер-трекер настройка потребует отдельной логики вне socket option.
     tcpNodelay: Boolean,
     connectionTimeoutSeconds: Int,
     readTimeoutSeconds: Int,
@@ -156,7 +159,7 @@ final case class LoggingConfig(
  */
 final case class RateLimitConfig(
     enabled: Boolean = true,
-    maxConnectionsPerIp: Int = 100,        // Максимум соединений с одного IP
+    maxConnectionsPerIp: Int = 200,        // Максимум соединений с одного IP
     refillRatePerSecond: Int = 10,         // Скорость восстановления токенов
     burstSize: Int = 50,                   // Допустимый burst
     cleanupIntervalSeconds: Int = 300       // Интервал очистки старых записей
@@ -167,6 +170,7 @@ final case class RateLimitConfig(
  */
 final case class AppConfig(
     instanceId: String,        // Уникальный ID инстанса (cm-instance-1, cm-instance-2, ...)
+    // QUESTION(AI): где он назначается? Это может быть сгенерированный UUID при старте, или же задаваться через переменную окружения для удобства мониторинга и логирования в продакшене?
     debugMode: Boolean = false, // Подробные debug логи (hex-дампы пакетов, все поля точек). ТОЛЬКО для тестового стенда!
     tcp: TcpConfig,
     http: HttpConfig,

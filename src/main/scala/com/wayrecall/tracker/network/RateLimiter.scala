@@ -94,8 +94,8 @@ object RateLimiter:
             // Лимит превышен - отклоняем
             (false, records + (ip -> ConnectionRecord(validTimestamps)))
           else
-            // Добавляем новый timestamp - разрешаем
-            val newTimestamps = validTimestamps :+ now
+            // Добавляем новый timestamp - разрешаем (O(1) prepend)
+            val newTimestamps = now :: validTimestamps
             (true, records + (ip -> ConnectionRecord(newTimestamps)))
         }
         

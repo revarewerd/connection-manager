@@ -1,6 +1,6 @@
-# Connection Manager — Runbook v3.0
+# Connection Manager — Runbook v5.0
 
-> Тег: `АКТУАЛЬНО` | Обновлён: `2026-03-01` | Версия: `3.0`
+> Тег: `АКТУАЛЬНО` | Обновлён: `2026-03-11` | Версия: `5.0`
 
 ## Быстрый запуск
 
@@ -67,10 +67,43 @@ curl http://localhost:10090/api/connections/352094080055555/last-position | jq
 curl -X DELETE http://localhost:10090/api/connections/352094080055555
 ```
 
-### Prometheus метрики
+### Prometheus метрики (CmMetrics v6.0)
 
 ```bash
 curl http://localhost:10090/api/metrics
+```
+
+Возвращает Prometheus text exposition формат с 16 метриками:
+
+```
+# HELP cm_connections_active Текущие активные TCP соединения
+# TYPE cm_connections_active gauge
+cm_connections_active 42
+
+# HELP cm_connections_total Всего TCP соединений с момента старта
+# TYPE cm_connections_total counter
+cm_connections_total 1523
+
+cm_packets_received_total 45678
+cm_gps_points_received_total 234567
+cm_gps_points_published_total 234100
+cm_parse_errors_total 42
+cm_kafka_publish_success_total 234100
+cm_kafka_publish_errors_total 3
+cm_redis_operations_total 1500
+cm_unknown_devices_total 12
+cm_commands_sent_total 8
+cm_uptime_seconds 3600
+```
+
+**Prometheus scrape config:**
+```yaml
+scrape_configs:
+  - job_name: 'connection-manager'
+    static_configs:
+      - targets: ['localhost:10090']
+    metrics_path: '/api/metrics'
+    scrape_interval: 15s
 ```
 
 ---
@@ -173,11 +206,20 @@ tcpdump -i any port 5001 -A | head -50
 
 ## Мониторинг
 
-### Ключевые метрики (Prometheus)
+### Ключевые метрики (Prometheus) — CmMetrics v6.0
 
 ```
-cm_connections_active        — текущие TCP соединения
-cm_uptime_seconds           — время работы
+cm_connections_active        — текущие TCP соединения (gauge)
+cm_connections_total         — всего соединений с момента старта (counter)
+cm_disconnections_total      — всего отключений (counter)
+cm_packets_received_total    — пакетов принято (counter)
+cm_gps_points_received_total — GPS-точек принято (counter)
+cm_gps_points_published_total— GPS-точек опубликовано в Kafka (counter)
+cm_parse_errors_total        — ошибок парсинга (counter)
+cm_kafka_publish_errors_total— ошибок Kafka (counter)
+cm_unknown_devices_total     — незарегистрированных устройств (counter)
+cm_commands_sent_total       — команд отправлено (counter)
+cm_uptime_seconds            — время работы (gauge)
 ```
 
 ### Логирование
@@ -239,3 +281,67 @@ CM обрабатывает SIGTERM/SIGINT:
 2. Завершает обработку текущих пакетов
 3. Публикует DISCONNECTED для всех активных соединений
 4. Закрывает Redis/Kafka подключения
+
+---
+
+## Тюнинг производительности (100K+ соединений)
+
+### OS уровень (Linux)
+
+```bash
+# Максимум открытых файлов (каждый TCP = 1 fd)
+ulimit -n 200000
+
+# Или в /etc/security/limits.conf:
+# wayrecall soft nofile 200000
+# wayrecall hard nofile 200000
+
+# Kernel параметры
+sysctl -w net.core.somaxconn=4096
+sysctl -w net.ipv4.tcp_max_syn_backlog=4096
+sysctl -w net.core.netdev_max_backlog=5000
+sysctl -w net.ipv4.ip_local_port_range="1024 65535"
+```
+
+### Проверить Epoll/KQueue
+
+CM v5.0 автоматически использует Epoll (Linux) или KQueue (macOS).
+Проверить в логах при старте:
+```
+[INFO] TCP: используется Epoll native transport
+```
+
+Если в логах `NIO` вместо `Epoll` — проверить наличие `netty-transport-native-epoll` в classpath:
+```bash
+sbt "show dependencyClasspath" | grep epoll
+```
+
+### JVM параметры
+
+```bash
+# Рекомендуемые для 100K соединений
+java -Xmx4g -Xms4g \
+  -XX:+UseZGC \
+  -XX:+UseStringDeduplication \
+  -Dio.netty.recycler.maxCapacityPerThread=0 \
+  -Dio.netty.leakDetection.level=disabled \
+  -jar connection-manager.jar
+```
+
+### Мониторинг при нагрузочном тестировании
+
+```bash
+# Количество TCP соединений (Linux)
+ss -s | grep estab
+
+# Файловые дескрипторы процесса CM
+ls /proc/$(pgrep -f connection-manager)/fd | wc -l
+
+# Kafka consumer lag
+kafka-consumer-groups --bootstrap-server localhost:9092 \
+  --describe --group connection-manager
+```
+
+### Подробнее
+- [PERFORMANCE_AUDIT_100K.md](PERFORMANCE_AUDIT_100K.md) — полный аудит
+- [SCALABILITY_ISSUES.md](SCALABILITY_ISSUES.md) — история масштабирования

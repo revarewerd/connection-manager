@@ -69,6 +69,18 @@ object GtltParserSpec extends ZIOSpecDefault:
         yield
           assertTrue(points.head.latitude < 0.0) &&
           assertTrue(points.head.longitude < 0.0)
+      },
+
+      test("невалидные speed/direction → 0 вместо crash") {
+        val frame = "*HQ,352093082745395,V1,120000,A,5545.1929,N,03737.2814,E,abc,xyz,010326,FFFFFBFF#"
+        val buffer = Unpooled.copiedBuffer(frame, US_ASCII)
+
+        for
+          points <- parser.parseData(buffer, "352093082745395")
+        yield
+          assertTrue(points.nonEmpty) &&
+          assertTrue(points.head.speed == 0) &&
+          assertTrue(points.head.angle == 0)
       }
     ),
 

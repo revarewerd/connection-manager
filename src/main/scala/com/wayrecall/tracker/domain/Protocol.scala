@@ -29,6 +29,7 @@ enum Protocol derives JsonCodec:
   case TK102            // TK102 — ASCII, '(' framing, NMEA coords
   case TK103            // TK103 — ASCII, идентичен TK102 с другим именем
   case Arnavi           // Arnavi — CSV $AV,V2/V3, NMEA coords, RCPTOK ACK
+  case Neomatica        // Neomatica — отдельный порт, гибридный парсер с авто-fallback
   case Adm              // ADM-107 — binary LE, float coords, conditional ACK
   case Gtlt             // GTLT3MT1 (GT-LITE) — CSV '#'-delimited, *HQ header
   case MicroMayak       // Автофон МикроМаяк — binary, packed GPS bitfields

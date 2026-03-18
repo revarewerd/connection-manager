@@ -5,6 +5,7 @@ import zio.test.*
 import zio.test.Assertion.*
 import io.netty.channel.{ChannelHandlerContext, Channel}
 import com.wayrecall.tracker.protocol.ProtocolParser
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Тесты для ConnectionRegistry
@@ -78,7 +79,7 @@ object ConnectionRegistrySpec extends ZIOSpecDefault:
     def encodeCommand(command: com.wayrecall.tracker.domain.Command) = ???
   
   private def makeRegistry: UIO[ConnectionRegistry] =
-    Ref.make(Map.empty[String, ConnectionEntry]).map(ConnectionRegistry.Live(_))
+    ZIO.succeed(ConnectionRegistry.Live(new ConcurrentHashMap[String, MutableConnectionEntry]()))
   
   private def makeMockContext: UIO[(ChannelHandlerContext, Ref[Boolean])] =
     for

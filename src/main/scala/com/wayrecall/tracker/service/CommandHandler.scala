@@ -177,9 +177,12 @@ object CommandHandler:
         // 2. Читаем из Redis backup
         redisKey = REDIS_PENDING_KEY_PREFIX + imei
         redisCommandsJson <- redis.zrange(redisKey, 0, -1)
-        redisCommands = redisCommandsJson.flatMap { json =>
-          json.fromJson[PendingCommand].toOption
-        }
+        redisCommands <- ZIO.foreach(redisCommandsJson) { json =>
+          json.fromJson[PendingCommand] match
+            case Right(cmd) => ZIO.some(cmd)
+            case Left(err) =>
+              ZIO.logWarning(s"[COMMAND] Невалидная pending-команда в Redis для $imei: $err").as(None)
+        }.map(_.flatten)
         
         // 3. Мержим и дедуплицируем по commandId
         allCommands = (memoryCommands ++ redisCommands)

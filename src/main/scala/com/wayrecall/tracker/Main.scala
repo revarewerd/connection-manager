@@ -3,9 +3,8 @@ package com.wayrecall.tracker
 import zio.*
 import zio.logging.backend.SLF4J
 import com.wayrecall.tracker.config.*
-import com.wayrecall.tracker.network.{TcpServer, ConnectionHandler, GpsProcessingService, ConnectionRegistry, CommandService, IdleConnectionWatcher, RateLimiter, DeviceConfigListener}
-import com.wayrecall.tracker.service.CommandHandler
-import com.wayrecall.tracker.service.DeviceEventConsumer
+import com.wayrecall.tracker.network.{TcpServer, ConnectionHandler, ConnectionRegistry, CommandService, IdleConnectionWatcher, RateLimiter, DeviceConfigListener}
+import com.wayrecall.tracker.service.{GpsProcessingService, CommandHandler, DeviceEventConsumer}
 import com.wayrecall.tracker.protocol.*
 import com.wayrecall.tracker.storage.{RedisClient, KafkaProducer}
 import com.wayrecall.tracker.filter.{DeadReckoningFilter, StationaryFilter}
@@ -32,7 +31,7 @@ object Main extends ZIOAppDefault:
     Throwable, Unit
   ] =
     for
-      config <- ZIO.service[AppConfig]
+      config <- ZIO.service[AppConfig]//QUESTION(U):тут происходит создание инстанса AppConfig из application.conf? И если в конфиге будет ошибка (например, пропущено обязательное поле или неверный формат), то мы получим ошибку на этом этапе, которая будет корректно залогирована и не позволит запуститься приложению с некорректной конфигурацией?
       server <- ZIO.service[TcpServer]
       service <- ZIO.service[GpsProcessingService]
       registry <- ZIO.service[ConnectionRegistry]
@@ -52,7 +51,8 @@ object Main extends ZIOAppDefault:
       // ============================================================
       // ПОРЯДОК ЗАПУСКА (критично для корректной работы!)
       // ============================================================
-      
+      //QUESTION(U):как то странно логи проверки Redis и Kafka выглядят. Мы же уже создаём клиенты через ZLayer, так почему бы не логировать успешное создание клиентов, а не просто конфигурацию? И как мы можем убедиться, что эти клиенты действительно подключены и готовы к работе, прежде чем продолжать запуск остальных компонентов? Ответ в том, что мы можем добавить проверку подключения внутри слоёв RedisClient и KafkaProducer, которая будет выполняться при их инициализации. Если подключение не удаётся, слой будет выдавать ошибку, и мы сможем её отловить в Main и логировать как критическую ошибку.
+      // ANSWER(AI): да, твоя мысль верная. Здесь сейчас логируются в основном намерения и конфиг, а реальная проверка готовности должна жить в acquire/init соответствующих слоёв (RedisClient/KafkaProducer). Если слой не поднялся, provide(appLayer) упадёт до старта program.
       // Шаг 1: Проверяем подключение к Redis (ZLayer уже создал клиент)
       _ <- ZIO.logInfo("[1/6] Проверка Redis...")
       // Redis клиент уже инициализирован через ZLayer
@@ -70,9 +70,11 @@ object Main extends ZIOAppDefault:
       
       // Шаг 3: Подписываемся на Redis pub/sub для динамической конфигурации
       _ <- ZIO.logInfo("[3/7] Запуск слушателей Redis...")
-      _ <- deviceConfigListener.start.forkDaemon
+      _ <- deviceConfigListener.start.forkDaemon//QUESTION(U):что такое форк демон? Это же способ запустить фоновую задачу, которая будет работать параллельно с основной программой, и при этом не будет блокировать её завершение? И мы используем его для слушателя конфигурации устройств, потому что он должен работать постоянно и не должен мешать основному потоку выполнения, который запускает TCP серверы и HTTP API?
+      // ANSWER(AI): именно так. forkDaemon запускает эффект в фоне и не блокирует основной сценарий старта; при завершении приложения daemon-fiber тоже будет прерван.
       _ <- ZIO.logInfo("      ✓ Device config listener (device-config-changed)")
-      _ <- commandService.startCommandListener.forkDaemon
+      _ <- commandService.startCommandListener.forkDaemon//QUESTION(U): а зачем нам вообще этот слушатель команд? Мы же уже запускаем Kafka Consumer для команд, так почему бы не использовать его для получения команд, вместо того, чтобы держать два разных механизма (Redis Pub/Sub и Kafka)? Ответ в том, что мы используем Redis Pub/Sub для legacy поддержки и совместимости с существующими инструментами, которые публикуют команды в Redis. Это позволяет нам плавно перейти на Kafka, не нарушая текущую работу. Со временем мы можем планировать миграцию всех команд на Kafka и удалить поддержку Redis Pub/Sub.
+      // ANSWER(AI): да, это legacy-канал совместимости. Основной путь уже Kafka (device-commands), а Redis listener оставлен временно, чтобы старые продюсеры команд не сломались во время миграции.
       _ <- ZIO.logInfo("      ✓ Command listener (commands:*) [DEPRECATED - для совместимости]")
       
       // Шаг 4: Запуск мониторинга idle соединений
@@ -99,6 +101,10 @@ object Main extends ZIOAppDefault:
         if debug then DebugProtocolParser.wrap(p) else p
       
       // Создаем фабрики обработчиков для каждого протокола
+      //QUESTION(U): на каждом инстансе ConnectionHandler.factory мы передаем service, parser, registry и runtime. Это же значит, что каждый протокол будет использовать один и тот же GpsProcessingService, ConnectionRegistry и Runtime? И как это влияет на производительность и изоляцию между протоколами? Ответ в том, что да, все протоколы будут использовать общий сервис обработки GPS данных и реестр соединений, что позволяет централизованно управлять логикой обработки и состоянием устройств. Runtime также общий, что позволяет эффективно использовать ресурсы и обрабатывать большое количество соединений параллельно. Изоляция между протоколами достигается за счет того, что каждый ConnectionHandler будет работать со своим парсером и обрабатывать свои входящие данные независимо от других.
+      // ANSWER(AI): верно. Общие service/registry/runtime уменьшают дублирование и дают единые правила обработки; изоляция протоколов обеспечивается разными parser + разными TCP портами/handler-инстансами.
+      //QUESTION(U): а как мне поднять два инстанса одного протокола на разных портах? Например, если я хочу запустить два Teltonika сервера на портах 5000 и 5001, как мне это сконфигурировать и запустить? Ответ в том, что для этого нужно добавить в конфигурацию два разных блока для Teltonika с разными портами, например teltonika1 и teltonika2. Затем в программе при создании фабрик обработчиков и запуске серверов нужно будет создать отдельные фабрики для каждого блока и вызвать startServerIfEnabled для каждого из них.
+      //QUESTION(U):что будет если один инстанс упадет? Например, если Teltonika сервер на порту 5000 столкнется с критической ошибкой и упадет, это повлияет на остальные сервера и сервисы? Ответ в том, что если один инстанс упадет, это не должно напрямую повлиять на остальные, так как они работают в отдельных fibers. Однако, если ошибка критическая и не обрабатывается должным образом, она может привести к падению всего приложения. Поэтому важно правильно обрабатывать ошибки внутри каждого сервера и использовать ZIO's error handling для изоляции сбоев.
       teltonikaFactory = ConnectionHandler.factory(service, maybeWrap(new TeltonikaParser), registry, runtime)
       wialonFactory = ConnectionHandler.factory(service, maybeWrap(WialonAdapterParser), registry, runtime)
       ruptelaFactory = ConnectionHandler.factory(service, maybeWrap(RuptelaParser), registry, runtime)
@@ -112,6 +118,7 @@ object Main extends ZIOAppDefault:
       tk102Factory = ConnectionHandler.factory(service, maybeWrap(TK102Parser.tk102), registry, runtime)
       tk103Factory = ConnectionHandler.factory(service, maybeWrap(TK102Parser.tk103), registry, runtime)
       arnaviFactory = ConnectionHandler.factory(service, maybeWrap(ArnaviParser), registry, runtime)
+      neomaticaFactory = ConnectionHandler.factory(service, maybeWrap(NeomaticaParser), registry, runtime)
       admFactory = ConnectionHandler.factory(service, maybeWrap(AdmParser), registry, runtime)
       gtltFactory = ConnectionHandler.factory(service, maybeWrap(GtltParser), registry, runtime)
       microMayakFactory = ConnectionHandler.factory(service, maybeWrap(MicroMayakParser), registry, runtime)
@@ -137,6 +144,7 @@ object Main extends ZIOAppDefault:
           startServerIfEnabled("TK102", config.tcp.tk102, server, tk102Factory),
           startServerIfEnabled("TK103", config.tcp.tk103, server, tk103Factory),
           startServerIfEnabled("Arnavi", config.tcp.arnavi, server, arnaviFactory),
+          startServerIfEnabled("Neomatica", config.tcp.neomatica, server, neomaticaFactory),
           startServerIfEnabled("ADM", config.tcp.adm, server, admFactory),
           startServerIfEnabled("GTLT", config.tcp.gtlt, server, gtltFactory),
           startServerIfEnabled("MicroMayak", config.tcp.microMayak, server, microMayakFactory),
@@ -168,6 +176,7 @@ object Main extends ZIOAppDefault:
       _ <- ZIO.logInfo(s"TK102: порт ${config.tcp.tk102.port} (enabled: ${config.tcp.tk102.enabled})")
       _ <- ZIO.logInfo(s"TK103: порт ${config.tcp.tk103.port} (enabled: ${config.tcp.tk103.enabled})")
       _ <- ZIO.logInfo(s"Arnavi: порт ${config.tcp.arnavi.port} (enabled: ${config.tcp.arnavi.enabled})")
+      _ <- ZIO.logInfo(s"Neomatica: порт ${config.tcp.neomatica.port} (enabled: ${config.tcp.neomatica.enabled})")
       _ <- ZIO.logInfo(s"ADM: порт ${config.tcp.adm.port} (enabled: ${config.tcp.adm.enabled})")
       _ <- ZIO.logInfo(s"GTLT: порт ${config.tcp.gtlt.port} (enabled: ${config.tcp.gtlt.enabled})")
       _ <- ZIO.logInfo(s"MicroMayak: порт ${config.tcp.microMayak.port} (enabled: ${config.tcp.microMayak.enabled})")
@@ -175,7 +184,8 @@ object Main extends ZIOAppDefault:
       _ <- ZIO.logInfo("Нажмите Ctrl+C для остановки (graceful shutdown)")
       
       // Ожидаем бесконечно (graceful shutdown при SIGTERM)
-      _ <- ZIO.never
+      _ <- ZIO.never//QUESTION(U):это что за конструкция такая ZIO.never? Это же способ создать эффект, который никогда не завершится, и используется для того, чтобы основной поток выполнения не завершался, пока мы не получим сигнал остановки (например, SIGTERM)? И при этом мы можем обрабатывать этот сигнал и выполнять необходимые действия для graceful shutdown, такие как закрытие соединений и освобождение ресурсов?
+      // ANSWER(AI): да, ZIO.never удерживает приложение "живым" после старта всех компонент. Остановка приходит извне (Ctrl+C/SIGTERM), после чего runtime прерывает fibers и выполняет release/finalizer в scoped-ресурсах.
     yield ()
   
   /**
@@ -267,7 +277,10 @@ object Main extends ZIOAppDefault:
     
     // Финальная композиция
     configLayer ++ tcpServerLayer ++ processingServiceLayer ++ registryLayer ++ commandServiceLayer ++ commandHandlerLayer ++ deviceEventConsumerLayer ++ dynamicConfigLayer ++ idleWatcherLayer ++ deviceConfigListenerLayer ++ rateLimiterLayer
-  
+  //QUESTION(U):где сам TCP сервер? Он же должен быть в слое TcpServer.liveWithRateLimiter, который мы композируем в appLayer? И как мы гарантируем, что он будет запущен при старте приложения? Ответ в том, что да, TCP сервер создаётся в слое TcpServer.liveWithRateLimiter, который мы включаем в appLayer. А запуск серверов происходит в программе (program), где мы вызываем startServerIfEnabled для каждого протокола. Таким образом, при старте приложения, после инициализации всех слоёв, мы запускаем TCP серверы согласно конфигурации.
+  // ANSWER(AI): точно. appLayer только создаёт сервис TcpServer, а фактический bind(port) делается в program через startServerIfEnabled/startMultiServerIfEnabled.
+//QUESTION(U): хочу понять где сама обработка пакета, я видел функции, но не понял где они вызываются
+// WALKTHROUGH(AI): путь такой: TcpServer.start -> ChannelInitializer.initChannel -> pipeline.addLast("handler", handlerFactory()) -> Netty вызывает ConnectionHandler.channelRead при входящем ByteBuf -> внутри вызываются handleImeiPacket/handleDataPacket -> затем GpsProcessingService.process* -> Kafka/Redis.
   override def run: ZIO[Any, Any, Any] =
     program
       .provideSome[Any](appLayer)

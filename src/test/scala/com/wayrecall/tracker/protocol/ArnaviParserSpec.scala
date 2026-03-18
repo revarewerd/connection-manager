@@ -58,6 +58,19 @@ object ArnaviParserSpec extends ZIOSpecDefault:
           assertTrue(points.head.speed == 60) &&
           assertTrue(points.head.angle == 180) &&
           assertTrue(points.head.altitude == 0)
+      },
+
+      test("невалидные speed/course → 0 вместо crash") {
+        // Подставляем \"abc\" вместо speed и \"xyz\" вместо course
+        val frame = "$AV,V2,352093,082745395,0,0,0,0,0,0,0,0,3,12,120000,03737.2814E,5545.1929N,abc,xyz,010326,00"
+        val buffer = Unpooled.copiedBuffer(frame, UTF_8)
+
+        for
+          points <- parser.parseData(buffer, "352093-082745395")
+        yield
+          assertTrue(points.nonEmpty) &&
+          assertTrue(points.head.speed == 0) &&
+          assertTrue(points.head.angle == 0)
       }
     ),
 

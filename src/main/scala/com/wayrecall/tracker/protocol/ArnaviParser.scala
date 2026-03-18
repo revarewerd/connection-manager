@@ -150,8 +150,8 @@ object ArnaviParser extends ProtocolParser:
     val lon = parseNmeaCoord(xcoord)
     val lat = parseNmeaCoord(ycoord)
     
-    val speed = speedStr.toDouble.toInt
-    val course = courseStr.toDouble.toInt
+    val speed = speedStr.toDoubleOption.getOrElse(0.0).toInt
+    val course = courseStr.toDoubleOption.getOrElse(0.0).toInt
     
     val date = LocalDate.parse(dateStr, dateFormat).atStartOfDay(ZoneId.of("UTC"))
     val time = LocalTime.parse(timeStr, timeFormat)

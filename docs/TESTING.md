@@ -1,4 +1,4 @@
-> Тег: `АКТУАЛЬНО` | Обновлён: `2026-03-02` | Версия: `1.0`
+> Тег: `АКТУАЛЬНО` | Обновлён: `2026-03-11` | Версия: `3.0`
 
 # Connection Manager — TESTING.md
 
@@ -7,7 +7,7 @@
 Все тесты написаны на **ZIO Test** (`ZIOSpecDefault`).
 Запуск: `sbt test` из директории `services/connection-manager/`.
 
-**Общая статистика:** 286+ тестов, 0 failures
+**Общая статистика:** 560 тестов, 0 failures
 
 ---
 
@@ -96,8 +96,10 @@
 
 | Файл | Что тестируется |
 |---|---|
-| `ConnectionRegistrySpec` | Регистрация/удаление соединений, конкурентный доступ |
+| `ConnectionRegistrySpec` | Регистрация/удаление соединений (ConcurrentHashMap + AtomicLong), unregisterIfSame |
 | `RateLimiterSpec` | Token Bucket алгоритм, пропускная способность |
+| `IdleConnectionWatcherSpec` | Отключение idle-соединений, параллельный disconnect |
+| `CommandServiceSpec` | Отправка команд через Redis Pub/Sub |
 
 ### 6. Домен (1 файл)
 
@@ -106,6 +108,16 @@
 | Файл | Что тестируется |
 |---|---|
 | `GeoMathSpec` | Haversine расстояние, GeoPoint валидация |
+
+### 7. Метрики (1 файл, 11 тестов) ★ NEW v6.0
+
+Расположение: `src/test/scala/com/wayrecall/tracker/service/`
+
+| Файл | Тестов | Что тестируется |
+|---|---|---|
+| `CmMetricsSpec` | 11 | LongAdder счётчики (3), AtomicLong gauge (2), Prometheus output формат (4), конкурентность (2) |
+
+`CmMetrics` — глобальный синглтон, тесты используют `@@ TestAspect.sequential` и `resetMetrics` перед каждым тестом.
 
 ---
 
@@ -134,3 +146,49 @@ sbt "testOnly com.wayrecall.tracker.protocol.TeltonikaParserSpec"
 4. **`@@ TestAspect.withLiveClock`** — конфликтует с `TestClock.adjust`, не миксовать
 5. **Teltonika setdigout** — формат single-bit: `"setdigout 1"` / `"setdigout 0"` (НЕ two-bit)
 6. **CommandStatus JSON** — `derives JsonCodec` на enum даёт `{"Sent":{}}` формат
+
+---
+
+## Изменения в v6.0
+
+### CmMetricsSpec (★ NEW)
+
+11 тестов для глобального объекта CmMetrics:
+- **Счётчики LongAdder:** increment, add, reset — проверка корректности суммы
+- **Gauge AtomicLong:** set/get activeConnections, обновление значений
+- **Prometheus формат:** проверка HELP/TYPE аннотаций, корректных значений, формата строк
+- **Конкурентность:** 100 параллельных increment (ZIO.foreachPar) = корректная сумма
+
+### Безопасный парсинг числовых полей (★ NEW)
+
+Добавлены тесты на `.toDoubleOption.getOrElse(0.0)` вместо падающего `.toDouble.toInt`:
+- **GoSafeParserSpec:** невалидные course/altitude/satellites → 0
+- **ArnaviParserSpec:** невалидные speed/course → 0
+- **GtltParserSpec:** невалидные speed/direction → 0
+
+### HttpApiSpec обновлён
+
+- Добавлен `unregisterIfSame` в MockConnectionRegistry
+- Тесты /metrics и /stats используют `CmMetrics.activeConnections.set(5)` для контроля глобального state
+
+### ConnectionRegistrySpec / IdleConnectionWatcherSpec / CommandServiceSpec
+
+Обновлены для ConcurrentHashMap[String, MutableConnectionEntry] (вместо Ref[Map]).
+`getIdleConnections` теперь использует `Clock.currentTime` — корректно работает с TestClock.
+
+## Изменения в v5.0
+
+### ConnectionRegistrySpec
+
+ConnectionRegistry переписан с `ZIO Ref[Map]` на `ConcurrentHashMap[String, MutableConnectionEntry]` + `AtomicLong`.
+Тесты на конкурентный доступ остаются актуальными, но внутренняя модель теперь lock-free.
+
+Новые тестовые сценарии:
+- `unregisterIfSame(imei, channel)` — проверка что удаление происходит только если канал совпадает
+- `updateActivity(imei)` — AtomicLong обновление без аллокаций
+- Race condition: параллельный register + unregister с проверкой корректности
+
+### ConnectionHandler (fork + Semaphore)
+
+ConnectionHandler теперь использует `runtime.unsafe.fork()` + `Semaphore(1)`.
+Тесты через mock ZIO layers не затронуты (тестируется бизнес-логика, не Netty интеграция).

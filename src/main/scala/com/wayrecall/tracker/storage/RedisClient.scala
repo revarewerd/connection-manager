@@ -185,15 +185,25 @@ object RedisClient:
     /** Загружает конфигурацию маршрутизации по IMEI из Redis (vehicle:config:{imei}) */
     override def getVehicleConfig(imei: String): IO[RedisError, Option[VehicleConfig]] =
       fromCompletionStage(commands.get(s"vehicle:config:$imei"))
-        .map { value =>
-          Option(value).flatMap(_.fromJson[VehicleConfig].toOption)
+        .flatMap { value =>
+          Option(value) match
+            case None => ZIO.none
+            case Some(json) =>
+              json.fromJson[VehicleConfig] match
+                case Right(cfg) => ZIO.some(cfg)
+                case Left(err)  => ZIO.logWarning(s"[REDIS] Невалидный VehicleConfig для $imei: $err").as(None)
         }
         .mapError(e => RedisError.OperationFailed(e.getMessage))
     
     override def getPosition(vehicleId: Long): IO[RedisError, Option[GpsPoint]] =
       fromCompletionStage(commands.get(positionKey(vehicleId)))
-        .map { value =>
-          Option(value).flatMap(_.fromJson[GpsPoint].toOption)
+        .flatMap { value =>
+          Option(value) match
+            case None => ZIO.none
+            case Some(json) =>
+              json.fromJson[GpsPoint] match
+                case Right(pt) => ZIO.some(pt)
+                case Left(err) => ZIO.logWarning(s"[REDIS] Невалидный GpsPoint для vehicleId=$vehicleId: $err").as(None)
         }
         .mapError(e => RedisError.OperationFailed(e.getMessage))
     
@@ -222,8 +232,9 @@ object RedisClient:
         val listener = new RedisPubSubAdapter[String, String] {
           override def message(ch: String, message: String): Unit =
             if ch == channel then
+              // Асинхронный callback → ZIO fiber (не блокируем Lettuce I/O поток)
               Unsafe.unsafe { implicit unsafe =>
-                runtime.unsafe.run(handler(message).catchAll(e => ZIO.logError(s"Handler error: $e"))).getOrThrowFiberFailure()
+                runtime.unsafe.fork(handler(message).catchAll(e => ZIO.logError(s"Handler error: $e")))
               }
         }
         pubSubConnection.addListener(listener)
@@ -234,8 +245,9 @@ object RedisClient:
       ZIO.attempt {
         val listener = new RedisPubSubAdapter[String, String] {
           override def message(pattern: String, channel: String, message: String): Unit =
+            // Асинхронный callback → ZIO fiber (не блокируем Lettuce I/O поток)
             Unsafe.unsafe { implicit unsafe =>
-              runtime.unsafe.run(handler(channel, message).catchAll(e => ZIO.logError(s"Handler error: $e"))).getOrThrowFiberFailure()
+              runtime.unsafe.fork(handler(channel, message).catchAll(e => ZIO.logError(s"Handler error: $e")))
             }
         }
         pubSubConnection.addListener(listener)

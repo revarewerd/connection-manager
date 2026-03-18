@@ -77,10 +77,10 @@ object IdleConnectionWatcher:
         // Находим idle соединения
         idleConnections <- registry.getIdleConnections(idleTimeoutMs)
         
-        // Закрываем каждое idle соединение и отправляем событие
-        _ <- ZIO.foreachDiscard(idleConnections) { entry =>
+        // Закрываем idle соединения параллельно (до 32 одновременно)
+        _ <- ZIO.foreachParDiscard(idleConnections) { entry =>
           disconnectWithNotification(entry, DisconnectReason.IdleTimeout)
-        }
+        }.withParallelism(32)
         
         count = idleConnections.size
         _ <- ZIO.when(count > 0)(
